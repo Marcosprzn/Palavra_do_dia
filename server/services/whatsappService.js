@@ -16,6 +16,8 @@ const db = require('../config/database');
 
 let sock = null;
 let ioInstance = null;
+let isInitializing = false;
+const qrEvents = new (require('events').EventEmitter)();
 let connectionStatus = {
   state: 'disconnected', // 'disconnected' | 'connecting' | 'qr_ready' | 'connected'
   qrCode: null,
@@ -32,6 +34,53 @@ function setSocketIo(io) {
 
 function getConnectionStatus() {
   return connectionStatus;
+}
+
+function waitForQrCode(timeoutMs = 12000) {
+  if (connectionStatus.state === 'qr_ready' && connectionStatus.qrCode) {
+    return Promise.resolve(connectionStatus.qrCode);
+  }
+  if (connectionStatus.state === 'connected') {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    const cleanup = () => {
+      qrEvents.removeListener('qr', onQr);
+      qrEvents.removeListener('connected', onConnected);
+    };
+
+    const onQr = (qr) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        cleanup();
+        resolve(qr);
+      }
+    };
+
+    const onConnected = () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(connectionStatus.qrCode || null);
+      }
+    }, timeoutMs);
+
+    qrEvents.once('qr', onQr);
+    qrEvents.once('connected', onConnected);
+  });
 }
 
 function broadcastStatus(state, data = {}) {
@@ -141,18 +190,25 @@ async function initWhatsApp(io, forceNew = false) {
     ioInstance = io;
   }
 
+  if (isInitializing) {
+    console.log('initWhatsApp já está inicializando, aguardando processo atual...');
+    return sock;
+  }
+  isInitializing = true;
+
   try {
     broadcastStatus('connecting');
 
     // Se já houver um socket rodando, encerra antes de recriar
     if (sock) {
       try {
-        sock.ev.removeAllListeners();
-        sock.end();
+        const oldSock = sock;
+        sock = null;
+        oldSock.ev.removeAllListeners();
+        oldSock.end();
       } catch (e) {
         console.warn('Aviso ao finalizar socket anterior:', e.message);
       }
-      sock = null;
     }
 
     // Se solicitado forceNew (gerar novo QR Code), limpa credenciais antigas do banco
@@ -167,7 +223,12 @@ async function initWhatsApp(io, forceNew = false) {
 
     // Load auth state from Database (Supabase PostgreSQL / SQLite)
     const { state, saveCreds, clearSession } = await useDatabaseAuthState('default');
-    const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
+
+    // Proteção com timeout de 3s contra travamento no fetchLatestBaileysVersion
+    const versionPromise = fetchLatestBaileysVersion();
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    const { version } = await Promise.race([versionPromise, timeoutPromise])
+      .catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
 
     const logger = pino({ level: 'silent' });
 
@@ -187,10 +248,10 @@ async function initWhatsApp(io, forceNew = false) {
       console.warn('Aviso ao carregar contatos salvos do banco:', e.message);
     }
 
-    sock = makeWASocket({
+    const currentSocket = makeWASocket({
       version,
       logger,
-      printQRInTerminal: true,
+      printQRInTerminal: false,
       auth: state,
       browser: Browsers.macOS('Desktop'),
       connectTimeoutMs: 60000,
@@ -199,16 +260,23 @@ async function initWhatsApp(io, forceNew = false) {
       syncFullHistory: true,
       markOnlineOnConnect: true
     });
+    sock = currentSocket;
 
-    sock.ev.on('creds.update', saveCreds);
+    currentSocket.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', async (update) => {
+    currentSocket.ev.on('connection.update', async (update) => {
+      // Ignorar eventos caso este socket tenha sido substituído
+      if (sock !== currentSocket) {
+        return;
+      }
+
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
         try {
           const qrDataUrl = await QRCode.toDataURL(qr, { scale: 8, margin: 2 });
           broadcastStatus('qr_ready', { qrCode: qrDataUrl, user: null });
+          qrEvents.emit('qr', qrDataUrl);
         } catch (err) {
           console.error('Erro ao gerar imagem QR Code:', err);
         }
@@ -219,7 +287,9 @@ async function initWhatsApp(io, forceNew = false) {
         const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
         console.log(`Conexão Baileys encerrada (código: ${statusCode}). Deslogado: ${isLoggedOut}`);
 
-        broadcastStatus('disconnected', { qrCode: null, user: null });
+        if (sock === currentSocket) {
+          broadcastStatus('disconnected', { qrCode: null, user: null });
+        }
 
         if (isLoggedOut) {
           // Desconectado explicitamente pelo celular ou sessão revogada - limpa do banco
@@ -228,17 +298,22 @@ async function initWhatsApp(io, forceNew = false) {
           } catch (e) {
             console.error('Erro ao limpar sessão do banco:', e);
           }
-        } else {
+        } else if (sock === currentSocket) {
           // Queda temporária de rede - tenta reconectar
-          setTimeout(() => initWhatsApp(ioInstance, false), 3000);
+          setTimeout(() => {
+            if (sock === currentSocket) {
+              initWhatsApp(ioInstance, false);
+            }
+          }, 3000);
         }
       } else if (connection === 'open') {
         console.log('✅ Conexão Baileys WhatsApp estabelecida com sucesso!');
         const user = {
-          id: sock.user?.id ? sock.user.id.split(':')[0] : '',
-          name: sock.user?.name || 'WhatsApp User'
+          id: currentSocket.user?.id ? currentSocket.user.id.split(':')[0] : '',
+          name: currentSocket.user?.name || 'WhatsApp User'
         };
         broadcastStatus('connected', { qrCode: null, user });
+        qrEvents.emit('connected');
       }
     });
 
@@ -395,6 +470,8 @@ async function initWhatsApp(io, forceNew = false) {
     console.error('Erro ao inicializar WhatsApp:', err);
     broadcastStatus('disconnected', { qrCode: null, user: null });
     return null;
+  } finally {
+    isInitializing = false;
   }
 }
 
@@ -448,6 +525,7 @@ async function logoutWhatsApp() {
 module.exports = {
   setSocketIo,
   getConnectionStatus,
+  waitForQrCode,
   broadcastStatus,
   formatJid,
   formatMessagePayload,

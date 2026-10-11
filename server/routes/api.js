@@ -50,11 +50,32 @@ router.get('/status', (req, res) => {
 // 2. WhatsApp connection controls
 router.post('/whatsapp/connect', async (req, res) => {
   try {
-    const isConnected = whatsappService.getConnectionStatus().state === 'connected';
-    // Se não estiver conectado, força a limpeza de credenciais anteriores para gerar um QR code novo
-    await whatsappService.initWhatsApp(null, !isConnected);
-    res.json({ success: true, message: 'Iniciando conexão e geração de QR Code...' });
+    const currentStatus = whatsappService.getConnectionStatus();
+    if (currentStatus.state === 'connected') {
+      return res.json({
+        success: true,
+        state: 'connected',
+        user: currentStatus.user,
+        message: 'WhatsApp já está conectado.'
+      });
+    }
+
+    // Inicia e força limpeza da sessão anterior para gerar um QR code novo e limpo
+    whatsappService.initWhatsApp(null, true);
+
+    // Aguarda o QR code gerado pelo Baileys (ou até 12 segundos)
+    const qrCode = await whatsappService.waitForQrCode(12000);
+    const finalStatus = whatsappService.getConnectionStatus();
+
+    res.json({
+      success: true,
+      state: finalStatus.state,
+      qrCode: qrCode || finalStatus.qrCode,
+      user: finalStatus.user,
+      message: qrCode ? 'QR Code gerado com sucesso!' : 'Aguardando inicialização do QR Code...'
+    });
   } catch (err) {
+    console.error('Erro ao conectar WhatsApp:', err);
     res.status(500).json({ error: err.message });
   }
 });

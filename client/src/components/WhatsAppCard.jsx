@@ -82,11 +82,11 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
             ) : (
               <button
                 onClick={onConnect}
-                disabled={loading || isConnecting}
+                disabled={loading}
                 className="flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl bg-[#382A1E] hover:bg-[#251B12] text-white shadow-sm transition-all cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 ${isConnecting ? 'animate-spin' : ''}`} />
-                {isConnecting ? 'Conectando...' : 'Gerar Novo QR Code'}
+                <RefreshCw className={`w-4 h-4 ${(isConnecting || loading) ? 'animate-spin' : ''}`} />
+                {isConnecting || loading ? 'Gerando QR Code...' : 'Gerar Novo QR Code'}
               </button>
             )}
           </div>
@@ -236,14 +236,21 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
                   </div>
                 </div>
               ) : isConnecting ? (
-                <div className="py-20 text-center space-y-4">
+                <div className="py-16 text-center space-y-4">
                   <div className="w-14 h-14 rounded-2xl bg-[#F4EFE6] border border-[#E8DFD3] flex items-center justify-center text-[#8E691A] mx-auto animate-pulse">
                     <RefreshCw className="w-6 h-6 animate-spin" />
                   </div>
                   <h4 className="text-sm font-bold text-[#382A1E]">Gerando QR Code...</h4>
                   <p className="text-xs text-[#7A6859] max-w-xs">
-                    Iniciando conexão segura com a API do WhatsApp.
+                    Iniciando conexão segura com a API do WhatsApp. O código aparecerá em instantes.
                   </p>
+                  <button
+                    onClick={onConnect}
+                    disabled={loading}
+                    className="mt-2 text-xs text-[#8E691A] hover:underline cursor-pointer font-medium"
+                  >
+                    Demorando? Clique para tentar novamente
+                  </button>
                 </div>
               ) : (
                 <div className="py-16 text-center space-y-4">

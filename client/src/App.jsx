@@ -137,11 +137,55 @@ export default function App() {
     }
   };
 
+  // Polling de fallback caso WebSockets oscilem ou desconectem no Render
+  useEffect(() => {
+    const pollInterval = waStatus.state === 'connecting' ? 2000 : 6000;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.whatsapp) {
+            setWaStatus(prev => {
+              if (
+                prev.state !== data.whatsapp.state ||
+                prev.qrCode !== data.whatsapp.qrCode ||
+                prev.user?.id !== data.whatsapp.user?.id
+              ) {
+                return data.whatsapp;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (e) {
+        // Silencioso em caso de erro temporário
+      }
+    }, pollInterval);
+
+    return () => clearInterval(interval);
+  }, [waStatus.state]);
+
   // WhatsApp Actions
   const handleConnectWhatsApp = async () => {
     setLoadingAction(true);
+    setWaStatus(prev => ({ ...prev, state: 'connecting' }));
     try {
-      await fetch('/api/whatsapp/connect', { method: 'POST' });
+      const res = await fetch('/api/whatsapp/connect', { method: 'POST' });
+      const data = await res.json();
+      if (data.qrCode) {
+        setWaStatus({
+          state: 'qr_ready',
+          qrCode: data.qrCode,
+          user: null
+        });
+      } else if (data.state) {
+        setWaStatus({
+          state: data.state,
+          qrCode: data.qrCode || null,
+          user: data.user || null
+        });
+      }
     } catch (err) {
       console.error('Erro ao conectar WhatsApp:', err);
     } finally {
