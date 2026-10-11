@@ -228,9 +228,10 @@ async function initWhatsApp(io, forceNew = false) {
     const versionPromise = fetchLatestBaileysVersion();
     const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
     const { version } = await Promise.race([versionPromise, timeoutPromise])
-      .catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
+      .catch(() => ({ version: [2, 3000, 1043857760], isLatest: true }));
 
-    const logger = pino({ level: 'silent' });
+    console.log(`[WhatsApp] Usando versão do Baileys: ${version.join('.')}`);
+    const logger = pino({ level: 'warn' });
 
     // Carregar contatos salvos no banco de dados previamente
     try {
@@ -248,6 +249,7 @@ async function initWhatsApp(io, forceNew = false) {
       console.warn('Aviso ao carregar contatos salvos do banco:', e.message);
     }
 
+    // syncFullHistory NÃO deve ser true durante pareamento pois a Meta encerra com erro 428
     const currentSocket = makeWASocket({
       version,
       logger,
@@ -257,7 +259,6 @@ async function initWhatsApp(io, forceNew = false) {
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 60000,
       keepAliveIntervalMs: 30000,
-      syncFullHistory: true,
       markOnlineOnConnect: true
     });
     sock = currentSocket;
@@ -273,33 +274,35 @@ async function initWhatsApp(io, forceNew = false) {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        console.log('[WhatsApp] 📌 Novo QR Code emitido pelo Baileys! Gerando imagem DataURL...');
         try {
           const qrDataUrl = await QRCode.toDataURL(qr, { scale: 8, margin: 2 });
           broadcastStatus('qr_ready', { qrCode: qrDataUrl, user: null });
           qrEvents.emit('qr', qrDataUrl);
+          console.log('[WhatsApp] ✅ QR Code pronto e transmitido aos clientes via Socket/HTTP.');
         } catch (err) {
-          console.error('Erro ao gerar imagem QR Code:', err);
+          console.error('[WhatsApp] ❌ Erro ao gerar imagem QR Code:', err);
         }
       }
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
-        console.log(`Conexão Baileys encerrada (código: ${statusCode}). Deslogado: ${isLoggedOut}`);
+        console.log(`[WhatsApp] 🔌 Conexão encerrada (código: ${statusCode || 'desconhecido'}). Deslogado: ${isLoggedOut}`);
 
         if (sock === currentSocket) {
           broadcastStatus('disconnected', { qrCode: null, user: null });
         }
 
         if (isLoggedOut) {
-          // Desconectado explicitamente pelo celular ou sessão revogada - limpa do banco
+          console.log('[WhatsApp] 🗑️ Sessão revogada ou desconectada pelo app. Limpando credenciais do banco...');
           try {
             await clearSession();
           } catch (e) {
-            console.error('Erro ao limpar sessão do banco:', e);
+            console.error('[WhatsApp] Erro ao limpar sessão do banco:', e);
           }
         } else if (sock === currentSocket) {
-          // Queda temporária de rede - tenta reconectar
+          console.log('[WhatsApp] ⏳ Queda temporária. Agendando tentativa de reconexão em 3s...');
           setTimeout(() => {
             if (sock === currentSocket) {
               initWhatsApp(ioInstance, false);
@@ -307,7 +310,7 @@ async function initWhatsApp(io, forceNew = false) {
           }, 3000);
         }
       } else if (connection === 'open') {
-        console.log('✅ Conexão Baileys WhatsApp estabelecida com sucesso!');
+        console.log('[WhatsApp] ✅ Conexão WhatsApp autenticada e aberta com sucesso!');
         const user = {
           id: currentSocket.user?.id ? currentSocket.user.id.split(':')[0] : '',
           name: currentSocket.user?.name || 'WhatsApp User'

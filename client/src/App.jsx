@@ -38,6 +38,7 @@ export default function App() {
     });
 
     socket.on('connection_status', (status) => {
+      console.log('[Socket.IO] Novo status do WhatsApp:', status);
       setWaStatus(status);
       if (status.state === 'qr_ready') {
         setActiveTab('whatsapp');
@@ -152,6 +153,7 @@ export default function App() {
                 prev.qrCode !== data.whatsapp.qrCode ||
                 prev.user?.id !== data.whatsapp.user?.id
               ) {
+                console.log('[Polling /api/status] Status atualizado:', data.whatsapp);
                 return data.whatsapp;
               }
               return prev;
@@ -159,7 +161,7 @@ export default function App() {
           }
         }
       } catch (e) {
-        // Silencioso em caso de erro temporário
+        console.warn('[Polling /api/status] Falha temporária:', e.message);
       }
     }, pollInterval);
 
@@ -170,16 +172,20 @@ export default function App() {
   const handleConnectWhatsApp = async () => {
     setLoadingAction(true);
     setWaStatus(prev => ({ ...prev, state: 'connecting' }));
+    console.log('[WhatsApp] 🚀 Enviando requisição para POST /api/whatsapp/connect...');
     try {
       const res = await fetch('/api/whatsapp/connect', { method: 'POST' });
       const data = await res.json();
+      console.log('[WhatsApp] 📩 Resposta da API recebida:', data);
       if (data.qrCode) {
+        console.log('[WhatsApp] ✅ QR Code recebido com sucesso na resposta da API!');
         setWaStatus({
           state: 'qr_ready',
           qrCode: data.qrCode,
           user: null
         });
       } else if (data.state) {
+        console.log('[WhatsApp] Estado retornado pela API:', data.state);
         setWaStatus({
           state: data.state,
           qrCode: data.qrCode || null,
@@ -187,7 +193,7 @@ export default function App() {
         });
       }
     } catch (err) {
-      console.error('Erro ao conectar WhatsApp:', err);
+      console.error('[WhatsApp] ❌ Erro ao conectar WhatsApp:', err);
     } finally {
       setLoadingAction(false);
     }
@@ -195,11 +201,13 @@ export default function App() {
 
   const handleLogoutWhatsApp = async () => {
     setLoadingAction(true);
+    console.log('[WhatsApp] 🔌 Desconectando WhatsApp via POST /api/whatsapp/logout...');
     try {
       await fetch('/api/whatsapp/logout', { method: 'POST' });
+      console.log('[WhatsApp] ✅ Desconectado com sucesso.');
       setActiveTab('whatsapp');
     } catch (err) {
-      console.error('Erro ao desconectar WhatsApp:', err);
+      console.error('[WhatsApp] ❌ Erro ao desconectar WhatsApp:', err);
     } finally {
       setLoadingAction(false);
     }
