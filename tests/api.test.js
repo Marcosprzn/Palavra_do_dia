@@ -74,7 +74,7 @@ async function runTest() {
       method: 'POST',
       body: JSON.stringify({
         recipients: [
-          { jid: '5511988887777@s.whatsapp.net', name: 'Maria Souza', type: 'individual', active: 1 }
+          { jid: '5511988887777@s.whatsapp.net', name: 'Contato Teste', type: 'individual', active: 1 }
         ]
       })
     });

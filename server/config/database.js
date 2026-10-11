@@ -197,6 +197,7 @@ async function getRecipients() {
 async function saveRecipients(list) {
   if (isPostgres) {
     for (const item of list) {
+      const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
       await pgPool.query(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
         VALUES ($1, $2, $3, $4, NOW())
@@ -205,7 +206,7 @@ async function saveRecipients(list) {
           type = EXCLUDED.type,
           active = EXCLUDED.active,
           updated_at = NOW()
-      `, [item.jid, item.name || '', item.type || 'individual', item.active !== undefined ? item.active : 1]);
+      `, [item.jid, item.name || '', item.type || 'individual', activeVal]);
     }
   } else {
     const stmt = sqliteDb.prepare(`
@@ -218,7 +219,8 @@ async function saveRecipients(list) {
         updated_at = CURRENT_TIMESTAMP
     `);
     for (const item of list) {
-      stmt.run(item.jid, item.name || '', item.type || 'individual', item.active !== undefined ? item.active : 1);
+      const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
+      stmt.run(item.jid, item.name || '', item.type || 'individual', activeVal);
     }
   }
 }

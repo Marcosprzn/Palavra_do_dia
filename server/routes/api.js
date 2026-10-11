@@ -208,31 +208,39 @@ router.get('/recipients', async (req, res) => {
     const dbRecipients = await db.getRecipients();
     const waRecipients = whatsappService.getContactsAndGroups();
 
-    const mergedMap = new Map();
-
-    // Add saved DB recipients first
+    const dbMap = new Map();
     for (const r of dbRecipients) {
-      mergedMap.set(r.jid, {
-        jid: r.jid,
-        name: r.name,
-        type: r.type,
-        active: r.active === 1 || r.active === true
-      });
+      if (r.jid) dbMap.set(r.jid, r);
     }
 
-    // Merge or insert WhatsApp contacts
-    for (const w of waRecipients) {
-      if (!mergedMap.has(w.jid)) {
+    const mergedMap = new Map();
+
+    // Se o WhatsApp estiver conectado e tiver sincronizado contatos, o WhatsApp é o espelho fiel
+    if (waRecipients.length > 0) {
+      for (const w of waRecipients) {
+        if (!w.jid || w.jid.includes('@g.us')) continue;
+        const saved = dbMap.get(w.jid);
         mergedMap.set(w.jid, {
           jid: w.jid,
-          name: w.name,
-          type: w.type,
-          active: false
+          name: (saved && saved.name) || w.name,
+          type: 'individual',
+          // Se o usuário já salvou preferência no banco, respeita. Caso contrário, vem marcado por padrão (true) para poder desmarcar
+          active: saved ? (saved.active === 1 || saved.active === true) : true
+        });
+      }
+    } else {
+      // Se o WhatsApp ainda não sincronizou, exibe os destinatários salvos no banco
+      for (const r of dbRecipients) {
+        if (!r.jid || r.jid.includes('@g.us')) continue;
+        mergedMap.set(r.jid, {
+          jid: r.jid,
+          name: r.name,
+          type: 'individual',
+          active: r.active === 1 || r.active === true
         });
       }
     }
 
-    // Filtra estritamente apenas contatos individuais (bloqueia grupos)
     const list = Array.from(mergedMap.values()).filter(
       r => r.type !== 'group' && !r.jid.includes('@g.us')
     );

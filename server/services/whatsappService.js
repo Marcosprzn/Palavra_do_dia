@@ -202,46 +202,93 @@ async function initWhatsApp(io) {
       }
     });
 
-    // Sincronizar contatos
-    sock.ev.on('contacts.upsert', (contacts) => {
+    // Sincronizar contatos (upsert, set, updates e histórico)
+    const handleAddContacts = (contacts) => {
+      if (!Array.isArray(contacts)) return;
+      let changed = false;
       for (const c of contacts) {
         if (c.id && !c.id.includes('@g.us')) {
+          const name = c.name || c.notify || c.verifiedName || (contactsMap.get(c.id)?.name) || c.id.split('@')[0];
           contactsMap.set(c.id, {
             jid: c.id,
-            name: c.name || c.notify || c.verifiedName || c.id.split('@')[0],
+            name,
             type: 'individual'
           });
+          changed = true;
         }
       }
-      broadcastContactsUpdate();
-    });
+      if (changed) broadcastContactsUpdate();
+    };
+
+    sock.ev.on('contacts.upsert', handleAddContacts);
+    sock.ev.on('contacts.set', ({ contacts }) => handleAddContacts(contacts));
 
     sock.ev.on('contacts.update', (updates) => {
+      let changed = false;
       for (const u of updates) {
-        if (u.id && contactsMap.has(u.id)) {
+        if (u.id && !u.id.includes('@g.us')) {
           const existing = contactsMap.get(u.id);
+          const name = u.name || u.notify || u.verifiedName || (existing?.name) || u.id.split('@')[0];
           contactsMap.set(u.id, {
-            ...existing,
-            name: u.name || u.notify || u.verifiedName || existing.name
+            jid: u.id,
+            name,
+            type: 'individual'
           });
+          changed = true;
         }
       }
-      broadcastContactsUpdate();
+      if (changed) broadcastContactsUpdate();
     });
 
-    // Sincronizar grupos
-    sock.ev.on('chats.upsert', (chats) => {
+    sock.ev.on('messaging-history.set', ({ contacts, chats }) => {
+      if (contacts) handleAddContacts(contacts);
+      if (Array.isArray(chats)) {
+        let changed = false;
+        for (const chat of chats) {
+          if (chat.id && !chat.id.includes('@g.us')) {
+            if (!contactsMap.has(chat.id)) {
+              contactsMap.set(chat.id, {
+                jid: chat.id,
+                name: chat.name || chat.notify || chat.id.split('@')[0],
+                type: 'individual'
+              });
+              changed = true;
+            }
+          }
+        }
+        if (changed) broadcastContactsUpdate();
+      }
+    });
+
+    // Sincronizar chats (para capturar conversas individuais e mapear grupos)
+    const handleChats = (chats) => {
+      if (!Array.isArray(chats)) return;
+      let changed = false;
       for (const chat of chats) {
-        if (chat.id && chat.id.includes('@g.us')) {
+        if (!chat.id) continue;
+        if (chat.id.includes('@g.us')) {
           groupsMap.set(chat.id, {
             jid: chat.id,
             name: chat.name || chat.subject || 'Grupo do WhatsApp',
             type: 'group'
           });
+        } else {
+          // Chat individual
+          if (!contactsMap.has(chat.id)) {
+            contactsMap.set(chat.id, {
+              jid: chat.id,
+              name: chat.name || chat.notify || chat.id.split('@')[0],
+              type: 'individual'
+            });
+            changed = true;
+          }
         }
       }
-      broadcastContactsUpdate();
-    });
+      if (changed) broadcastContactsUpdate();
+    };
+
+    sock.ev.on('chats.upsert', handleChats);
+    sock.ev.on('chats.set', ({ chats }) => handleChats(chats));
 
     return sock;
   } catch (err) {
