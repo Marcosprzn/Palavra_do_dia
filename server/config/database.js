@@ -314,6 +314,32 @@ async function deleteRecipient(jid) {
   }
 }
 
+async function deleteRecipientsBatch(jids) {
+  if (!Array.isArray(jids) || jids.length === 0) return;
+  if (isPostgres) {
+    for (const jid of jids) {
+      await pgPool.query('INSERT INTO deleted_recipients (jid) VALUES ($1) ON CONFLICT (jid) DO NOTHING', [jid]);
+    }
+    await pgPool.query('DELETE FROM recipients WHERE jid = ANY($1)', [jids]);
+  } else {
+    const insertStmt = sqliteDb.prepare('INSERT OR IGNORE INTO deleted_recipients (jid) VALUES (?)');
+    const delStmt = sqliteDb.prepare('DELETE FROM recipients WHERE jid = ?');
+    for (const jid of jids) {
+      insertStmt.run(jid);
+      delStmt.run(jid);
+    }
+  }
+}
+
+async function clearAllRecipients() {
+  if (isPostgres) {
+    await pgPool.query('DELETE FROM recipients');
+    await pgPool.query('DELETE FROM deleted_recipients');
+  } else {
+    sqliteDb.exec('DELETE FROM recipients; DELETE FROM deleted_recipients;');
+  }
+}
+
 async function logSend(entry) {
   if (isPostgres) {
     await pgPool.query(`
@@ -487,6 +513,8 @@ module.exports = {
   saveRecipients,
   autoUpsertRecipients,
   deleteRecipient,
+  deleteRecipientsBatch,
+  clearAllRecipients,
   logSend,
   getSendLogs,
   getDailyVerseState,

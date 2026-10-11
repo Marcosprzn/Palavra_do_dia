@@ -309,6 +309,31 @@ router.delete('/recipients/:jid', async (req, res) => {
   }
 });
 
+router.post('/recipients/delete-batch', async (req, res) => {
+  try {
+    const { jids } = req.body;
+    if (!Array.isArray(jids) || jids.length === 0) {
+      return res.status(400).json({ error: 'Nenhum contato informado para exclusão.' });
+    }
+    whatsappService.removeContactsBatch(jids);
+    await db.deleteRecipientsBatch(jids);
+    res.json({ success: true, count: jids.length, message: `${jids.length} destinatários excluídos com sucesso.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/recipients/clear', async (req, res) => {
+  try {
+    whatsappService.clearAllContacts();
+    await db.clearAllRecipients();
+    res.json({ success: true, message: 'Todos os destinatários foram removidos com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // 7. Dispatch (Manual / Test Trigger)
 router.post('/dispatch', async (req, res) => {
   try {

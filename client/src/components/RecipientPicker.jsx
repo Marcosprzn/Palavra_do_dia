@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, CheckSquare, Square, Check, Filter, RefreshCw, Info, Trash2, UserPlus, X, Edit2 } from 'lucide-react';
+import { Users, Search, CheckSquare, Square, Check, Filter, RefreshCw, Info, Trash2, UserPlus, X, Edit2, AlertTriangle } from 'lucide-react';
 
 function isRealName(name) {
   if (!name || typeof name !== 'string') return false;
@@ -29,6 +29,8 @@ export default function RecipientPicker({
   recipients,
   onSaveRecipients,
   onDeleteRecipient,
+  onDeleteBatch,
+  onClearAll,
   onAddRecipient,
   onRefresh,
   loading
@@ -38,6 +40,12 @@ export default function RecipientPicker({
   const [localList, setLocalList] = useState(recipients || []);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Bulk Delete / Multi-Select State
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState(new Set());
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   // Add Contact Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -50,7 +58,7 @@ export default function RecipientPicker({
   const [editingJid, setEditingJid] = useState(null);
   const [editingName, setEditingName] = useState('');
 
-  // Deleting State (by JID)
+  // Deleting State (individual)
   const [deletingJid, setDeletingJid] = useState(null);
 
   // Sync if parent updates
@@ -99,6 +107,71 @@ export default function RecipientPicker({
       setLocalList(prev => prev.filter(r => r.jid !== jid));
     } finally {
       setDeletingJid(null);
+    }
+  };
+
+  // Multi-select for Deletion handlers
+  const toggleSelectForDelete = (jid) => {
+    setSelectedForDelete(prev => {
+      const next = new Set(prev);
+      if (next.has(jid)) {
+        next.delete(jid);
+      } else {
+        next.add(jid);
+      }
+      return next;
+    });
+  };
+
+  const selectAllForDelete = () => {
+    const allFilteredJids = filtered.map(r => r.jid);
+    setSelectedForDelete(new Set(allFilteredJids));
+  };
+
+  const deselectAllForDelete = () => {
+    setSelectedForDelete(new Set());
+  };
+
+  const handleBatchDelete = async () => {
+    const count = selectedForDelete.size;
+    if (count === 0) return;
+    if (!window.confirm(`Tem certeza que deseja apagar os ${count} contatos selecionados? Eles serão removidos permanentemente.`)) {
+      return;
+    }
+
+    setIsDeletingBatch(true);
+    try {
+      const jidsArray = Array.from(selectedForDelete);
+      if (onDeleteBatch) {
+        await onDeleteBatch(jidsArray);
+      }
+      setLocalList(prev => prev.filter(r => !selectedForDelete.has(r.jid)));
+      setSelectedForDelete(new Set());
+      setDeleteMode(false);
+    } catch (err) {
+      alert('Erro ao excluir contatos selecionados: ' + err.message);
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
+
+  const handleClearAllRecipients = async () => {
+    if (!window.confirm('⚠️ ATENÇÃO: Tem certeza que deseja APAGAR TODOS os contatos da lista? Essa ação irá zerar o banco de contatos.')) {
+      return;
+    }
+
+    setIsClearingAll(true);
+    try {
+      if (onClearAll) {
+        await onClearAll();
+      }
+      setLocalList([]);
+      setSelectedForDelete(new Set());
+      setDeleteMode(false);
+    } catch (err) {
+      alert('Erro ao zerar contatos: ' + err.message);
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
@@ -184,7 +257,7 @@ export default function RecipientPicker({
               </span>
             </h2>
             <p className="text-[11px] sm:text-xs text-[#7A6859]">
-              {localList.length} contatos individuais ativos. Você pode renomear, marcar/desmarcar ou excluir contatos.
+              {localList.length} contatos salvos no sistema.
             </p>
           </div>
         </div>
@@ -211,9 +284,34 @@ export default function RecipientPicker({
             </button>
           )}
 
+          {!deleteMode ? (
+            <button
+              onClick={() => {
+                setDeleteMode(true);
+                setSelectedForDelete(new Set());
+              }}
+              className="p-2.5 sm:px-3 sm:py-2 text-xs font-semibold rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-all cursor-pointer shadow-xs flex items-center gap-1.5 flex-shrink-0"
+              title="Selecionar vários e apagar da lista"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+              <span>Apagar em Massa</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setDeleteMode(false);
+                setSelectedForDelete(new Set());
+              }}
+              className="p-2.5 sm:px-3 sm:py-2 text-xs font-semibold rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-300 transition-all cursor-pointer shadow-xs flex items-center gap-1.5 flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Fechar Modo Exclusão</span>
+            </button>
+          )}
+
           <button
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || deleteMode}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 ${
               savedFeedback
                 ? 'bg-[#2D6A4F] text-white'
@@ -225,6 +323,63 @@ export default function RecipientPicker({
           </button>
         </div>
       </div>
+
+      {/* Bulk Delete Bar (Active when in delete mode) */}
+      {deleteMode && (
+        <div className="p-4 mb-4 rounded-2xl bg-red-50 border border-red-200 shadow-xs space-y-3 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-red-100 text-red-700">
+                <Trash2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-red-900">
+                  Modo de Seleção e Exclusão em Massa
+                </h3>
+                <p className="text-[11px] text-red-700">
+                  {selectedForDelete.size} contato(s) selecionado(s) para exclusão.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={selectAllForDelete}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-white hover:bg-red-100 text-red-800 border border-red-200 cursor-pointer shadow-2xs"
+              >
+                Selecionar Todos ({filtered.length})
+              </button>
+              <button
+                type="button"
+                onClick={deselectAllForDelete}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-white hover:bg-red-100 text-neutral-700 border border-red-200 cursor-pointer shadow-2xs"
+              >
+                Limpar Seleção
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchDelete}
+                disabled={selectedForDelete.size === 0 || isDeletingBatch}
+                className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingBatch ? 'Excluindo...' : `Excluir Selecionados (${selectedForDelete.size})`}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllRecipients}
+                disabled={localList.length === 0 || isClearingAll}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white hover:bg-red-100 text-red-700 border border-red-300 cursor-pointer shadow-2xs flex items-center gap-1"
+                title="Zerar completamente a lista de contatos"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                <span>{isClearingAll ? 'Zerando...' : 'Zerar Banco de Contatos'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual Add Contact Form Modal/Drawer */}
       {showAddForm && (
@@ -300,11 +455,11 @@ export default function RecipientPicker({
       <div className="p-3 rounded-2xl bg-[#FDF9EF] border border-[#EBD69E] text-xs text-[#8E691A] flex items-start sm:items-center gap-2.5 mb-4">
         <Info className="w-4 h-4 flex-shrink-0 text-[#C59B27] mt-0.5 sm:mt-0" />
         <p className="leading-relaxed text-[11px] sm:text-xs">
-          <strong>Nomes dos contatos:</strong> O sistema puxa os nomes públicos de quem já trocou mensagens com você. Para qualquer contato sem nome, clique no <strong>ícone de lápis (✏️)</strong> ao lado do número para definir o nome desejado.
+          <strong>Gerenciamento de Contatos:</strong> Use <strong>Apagar em Massa</strong> para selecionar vários contatos e removê-los de uma só vez, ou o ícone de lápis (✏️) para personalizar o nome de qualquer contato.
         </p>
       </div>
 
-      {/* Search Bar & Bulk Actions */}
+      {/* Search Bar & Actions */}
       <div className="space-y-3 mb-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1">
@@ -318,20 +473,22 @@ export default function RecipientPicker({
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={selectAll}
-              className="px-3 py-2 text-xs font-medium rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer shadow-xs whitespace-nowrap"
-            >
-              Marcar Todos
-            </button>
-            <button
-              onClick={deselectAll}
-              className="px-3 py-2 text-xs font-medium rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer shadow-xs whitespace-nowrap"
-            >
-              Desmarcar Todos
-            </button>
-          </div>
+          {!deleteMode && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                className="px-3 py-2 text-xs font-medium rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer shadow-xs whitespace-nowrap"
+              >
+                Marcar Todos
+              </button>
+              <button
+                onClick={deselectAll}
+                className="px-3 py-2 text-xs font-medium rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer shadow-xs whitespace-nowrap"
+              >
+                Desmarcar Todos
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Filter Pills (All / Active / Inactive) */}
@@ -378,113 +535,149 @@ export default function RecipientPicker({
           <div className="text-center py-12 px-4 text-xs text-[#A8988B] space-y-1">
             {localList.length === 0 ? (
               <>
-                <p className="font-semibold text-[#7A6859]">Nenhum contato individual na lista.</p>
-                <p>Clique em "+ Adicionar Contato" para cadastrar ou conecte o WhatsApp para sincronizar automaticamente.</p>
+                <p className="font-semibold text-[#7A6859]">Nenhum contato salvo no banco.</p>
+                <p>O banco de contatos está totalmente limpo. Conecte o WhatsApp ou adicione contatos manualmente acima.</p>
               </>
             ) : (
               <p>Nenhum contato encontrado com o filtro ou busca aplicado.</p>
             )}
           </div>
         ) : (
-          filtered.map((item) => (
-            <div
-              key={item.jid}
-              className="p-3.5 flex items-center justify-between hover:bg-white transition-colors select-none group"
-            >
-              <div className="flex items-center gap-3.5 min-w-0 pr-2 flex-1">
-                <div
-                  className="flex-shrink-0 cursor-pointer"
-                  onClick={() => toggleRecipient(item.jid)}
-                >
-                  {item.active ? (
-                    <CheckSquare className="w-5 h-5 text-[#2D6A4F]" />
+          filtered.map((item) => {
+            const isSelectedForDelete = selectedForDelete.has(item.jid);
+            return (
+              <div
+                key={item.jid}
+                onClick={deleteMode ? () => toggleSelectForDelete(item.jid) : undefined}
+                className={`p-3.5 flex items-center justify-between transition-colors select-none group cursor-pointer ${
+                  deleteMode
+                    ? isSelectedForDelete
+                      ? 'bg-red-50/80 border-l-4 border-l-red-500'
+                      : 'hover:bg-red-50/30'
+                    : 'hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0 pr-2 flex-1">
+                  {deleteMode ? (
+                    <div
+                      className="flex-shrink-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelectForDelete(item.jid);
+                      }}
+                    >
+                      {isSelectedForDelete ? (
+                        <CheckSquare className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-neutral-400" />
+                      )}
+                    </div>
                   ) : (
-                    <Square className="w-5 h-5 text-[#C5B8AB]" />
+                    <div
+                      className="flex-shrink-0 cursor-pointer"
+                      onClick={() => toggleRecipient(item.jid)}
+                    >
+                      {item.active ? (
+                        <CheckSquare className="w-5 h-5 text-[#2D6A4F]" />
+                      ) : (
+                        <Square className="w-5 h-5 text-[#C5B8AB]" />
+                      )}
+                    </div>
+                  )}
+
+                  {editingJid === item.jid && !deleteMode ? (
+                    <div className="flex items-center gap-2 flex-1 max-w-sm" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEditingName(e, item.jid);
+                          if (e.key === 'Escape') cancelEditing(e);
+                        }}
+                        placeholder="Digite o nome do contato..."
+                        className="px-2.5 py-1 text-xs rounded-lg bg-white border border-[#C59B27] outline-none text-[#382A1E] w-full shadow-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => saveEditingName(e, item.jid)}
+                        title="Salvar nome"
+                        className="p-1.5 rounded-lg bg-[#2D6A4F] text-white hover:bg-[#23533e] cursor-pointer flex-shrink-0"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        title="Cancelar"
+                        className="p-1.5 rounded-lg bg-[#EFE9DF] text-[#7A6859] hover:bg-[#E2D8C9] cursor-pointer flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="min-w-0 flex-1 cursor-pointer"
+                      onClick={!deleteMode ? () => toggleRecipient(item.jid) : undefined}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <h4 className={`text-xs font-semibold truncate ${isSelectedForDelete && deleteMode ? 'text-red-950 font-bold' : 'text-[#382A1E]'}`}>
+                          {isRealName(item.name) ? item.name : formatPhoneDisplay(item.jid)}
+                        </h4>
+                        {!deleteMode && (
+                          <button
+                            onClick={(e) => startEditing(e, item)}
+                            title="Renomear este contato"
+                            className="p-1 rounded text-[#A8988B] hover:text-[#C59B27] hover:bg-[#F6F1EA] transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-[#8E7B6C] font-mono truncate">
+                        {isRealName(item.name) ? (
+                          formatPhoneDisplay(item.jid)
+                        ) : (
+                          <span className="text-[#A8988B] italic">Sem nome definido no WhatsApp</span>
+                        )}
+                      </p>
+                    </div>
                   )}
                 </div>
 
-                {editingJid === item.jid ? (
-                  <div className="flex items-center gap-2 flex-1 max-w-sm">
-                    <input
-                      type="text"
-                      autoFocus
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEditingName(e, item.jid);
-                        if (e.key === 'Escape') cancelEditing(e);
-                      }}
-                      placeholder="Digite o nome do contato..."
-                      className="px-2.5 py-1 text-xs rounded-lg bg-white border border-[#C59B27] outline-none text-[#382A1E] w-full shadow-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => saveEditingName(e, item.jid)}
-                      title="Salvar nome"
-                      className="p-1.5 rounded-lg bg-[#2D6A4F] text-white hover:bg-[#23533e] cursor-pointer flex-shrink-0"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEditing}
-                      title="Cancelar"
-                      className="p-1.5 rounded-lg bg-[#EFE9DF] text-[#7A6859] hover:bg-[#E2D8C9] cursor-pointer flex-shrink-0"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    className="min-w-0 flex-1 cursor-pointer"
-                    onClick={() => toggleRecipient(item.jid)}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-xs font-semibold text-[#382A1E] truncate">
-                        {isRealName(item.name) ? item.name : formatPhoneDisplay(item.jid)}
-                      </h4>
-                      <button
-                        onClick={(e) => startEditing(e, item)}
-                        title="Renomear este contato"
-                        className="p-1 rounded text-[#A8988B] hover:text-[#C59B27] hover:bg-[#F6F1EA] transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                <div className="flex items-center gap-2.5 flex-shrink-0">
+                  {!deleteMode ? (
+                    <>
+                      <span
+                        onClick={() => toggleRecipient(item.jid)}
+                        className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                          item.active
+                            ? 'text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9]'
+                            : 'text-[#8E7B6C] bg-white border border-[#E8DFD3]'
+                        }`}
                       >
-                        <Edit2 className="w-3 h-3" />
+                        {item.active ? 'Enviar' : 'Não Enviar'}
+                      </span>
+
+                      <button
+                        onClick={(e) => handleDelete(e, item.jid)}
+                        disabled={deletingJid === item.jid}
+                        title="Excluir este contato da lista"
+                        className="p-1.5 rounded-lg text-[#A8988B] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    </div>
-                    <p className="text-[10px] text-[#8E7B6C] font-mono truncate">
-                      {isRealName(item.name) ? (
-                        formatPhoneDisplay(item.jid)
-                      ) : (
-                        <span className="text-[#A8988B] italic">Sem nome definido no WhatsApp</span>
-                      )}
-                    </p>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${isSelectedForDelete ? 'bg-red-200 text-red-900' : 'bg-neutral-100 text-neutral-600'}`}>
+                      {isSelectedForDelete ? 'Selecionado' : 'Clique para marcar'}
+                    </span>
+                  )}
+                </div>
               </div>
-
-              <div className="flex items-center gap-2.5 flex-shrink-0">
-                <span
-                  onClick={() => toggleRecipient(item.jid)}
-                  className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all whitespace-nowrap cursor-pointer ${
-                    item.active
-                      ? 'text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9]'
-                      : 'text-[#8E7B6C] bg-white border border-[#E8DFD3]'
-                  }`}
-                >
-                  {item.active ? 'Enviar' : 'Não Enviar'}
-                </span>
-
-                <button
-                  onClick={(e) => handleDelete(e, item.jid)}
-                  disabled={deletingJid === item.jid}
-                  title="Excluir este contato da lista"
-                  className="p-1.5 rounded-lg text-[#A8988B] hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

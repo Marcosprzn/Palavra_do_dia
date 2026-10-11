@@ -612,6 +612,21 @@ function removeContact(jid) {
   }
 }
 
+function removeContactsBatch(jids) {
+  if (Array.isArray(jids)) {
+    for (const jid of jids) {
+      contactsMap.delete(jid);
+    }
+    broadcastContactsUpdate();
+  }
+}
+
+function clearAllContacts() {
+  contactsMap.clear();
+  groupsMap.clear();
+  broadcastContactsUpdate();
+}
+
 module.exports = {
   setSocketIo,
   getConnectionStatus,
@@ -624,6 +639,8 @@ module.exports = {
   initWhatsApp,
   getContactsAndGroups,
   removeContact,
+  removeContactsBatch,
+  clearAllContacts,
   sendMessage,
   logoutWhatsApp
 };

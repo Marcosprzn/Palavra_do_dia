@@ -335,6 +335,35 @@ export default function App() {
     }
   };
 
+  const handleDeleteBatch = async (jids) => {
+    try {
+      const res = await fetch('/api/recipients/delete-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jids })
+      });
+      if (res.ok) {
+        const jidSet = new Set(jids);
+        setRecipients(prev => prev.filter(r => !jidSet.has(r.jid)));
+      }
+    } catch (err) {
+      console.error('Erro ao excluir destinatários em lote:', err);
+    }
+  };
+
+  const handleClearAllRecipients = async () => {
+    try {
+      const res = await fetch('/api/recipients/clear', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        setRecipients([]);
+      }
+    } catch (err) {
+      console.error('Erro ao limpar todos os destinatários:', err);
+    }
+  };
+
   const handleAddRecipient = async ({ name, phone }) => {
     try {
       const res = await fetch('/api/recipients/add', {
@@ -535,6 +564,8 @@ export default function App() {
               recipients={recipients}
               onSaveRecipients={handleSaveRecipients}
               onDeleteRecipient={handleDeleteRecipient}
+              onDeleteBatch={handleDeleteBatch}
+              onClearAll={handleClearAllRecipients}
               onAddRecipient={handleAddRecipient}
               onRefresh={fetchRecipients}
               loading={loadingAction}
