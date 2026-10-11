@@ -51,7 +51,7 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              Contatos e grupos sincronizados do seu WhatsApp que receberão o versículo
+              Contatos individuais que receberão o versículo (grupos são estritamente bloqueados).
             </p>
           </div>
         </div>

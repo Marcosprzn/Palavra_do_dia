@@ -49,6 +49,12 @@ async function runTest() {
   fs.unlinkSync(tempImg);
   console.log('✓ formatMessagePayload handles text and image+caption correctly');
 
+  // 5. Test group sending prevention
+  const groupSkipResult = await whatsappService.sendMessage('120363024567890123@g.us', 'Tentativa grupo');
+  assert.strictEqual(groupSkipResult.status, 'skipped');
+  assert.strictEqual(groupSkipResult.reason, 'group_blocked');
+  console.log('✓ sendMessage strictly blocks sending to WhatsApp groups');
+
   console.log('ALL WHATSAPP SERVICE TESTS PASSED!');
 }
 

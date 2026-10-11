@@ -61,7 +61,9 @@ async function dispatchToRecipients(options = {}) {
 
   try {
     const allRecipients = await db.getRecipients();
-    const activeRecipients = allRecipients.filter(r => r.active === 1 || r.active === true);
+    const activeRecipients = allRecipients.filter(
+      r => (r.active === 1 || r.active === true) && r.type !== 'group' && !r.jid.includes('@g.us')
+    );
     const total = activeRecipients.length;
 
     if (total === 0) {

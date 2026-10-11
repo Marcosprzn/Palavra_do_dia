@@ -259,16 +259,23 @@ function broadcastContactsUpdate() {
 }
 
 function getContactsAndGroups() {
-  const contacts = Array.from(contactsMap.values());
-  const groups = Array.from(groupsMap.values());
-  return [...groups, ...contacts];
+  // Retorna apenas contatos individuais, ignorando grupos
+  return Array.from(contactsMap.values());
 }
 
 async function sendMessage(jid, text, imagePath = null) {
+  const formattedJid = formatJid(jid);
+
+  // Trava de segurança máxima: NUNCA disparar mensagens em grupos
+  if (formattedJid.includes('@g.us')) {
+    console.log(`[Segurança Anti-Grupo] Ignorando envio para grupo: ${formattedJid}`);
+    return { status: 'skipped', reason: 'group_blocked' };
+  }
+
   if (!sock) {
     throw new Error('WhatsApp não está conectado.');
   }
-  const formattedJid = formatJid(jid);
+
   const payload = formatMessagePayload(text, imagePath);
   return await sock.sendMessage(formattedJid, payload);
 }

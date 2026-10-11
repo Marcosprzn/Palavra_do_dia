@@ -211,7 +211,10 @@ router.get('/recipients', async (req, res) => {
       }
     }
 
-    const list = Array.from(mergedMap.values());
+    // Filtra estritamente apenas contatos individuais (bloqueia grupos)
+    const list = Array.from(mergedMap.values()).filter(
+      r => r.type !== 'group' && !r.jid.includes('@g.us')
+    );
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });
