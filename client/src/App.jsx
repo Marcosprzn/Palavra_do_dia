@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import {
-  Sparkles,
-  MessageCircleHeart,
-  ShieldCheck,
   Smartphone,
   BookOpen,
   Users,
   History,
+  ShieldCheck,
   CheckCircle2,
-  AlertCircle
+  Bookmark
 } from 'lucide-react';
 
 import WhatsAppCard from './components/WhatsAppCard';
@@ -40,7 +38,6 @@ export default function App() {
 
     socket.on('connection_status', (status) => {
       setWaStatus(status);
-      // If user connects while on whatsapp tab, they stay; if disconnected on load, show whatsapp tab
       if (status.state === 'qr_ready') {
         setActiveTab('whatsapp');
       }
@@ -50,7 +47,7 @@ export default function App() {
       if (data?.schedule_time) setScheduleTime(data.schedule_time);
     });
 
-    socket.on('contacts_synced', (contacts) => {
+    socket.on('contacts_synced', () => {
       fetchRecipients();
     });
 
@@ -193,12 +190,11 @@ export default function App() {
 
   const handleUpdateCaption = async (caption) => {
     try {
-      const res = await fetch('/api/verse/caption', {
+      await fetch('/api/verse/caption', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ caption })
       });
-      const data = await res.json();
       setVerseData(prev => ({ ...prev, custom_caption: caption }));
     } catch (err) {
       console.error('Erro ao atualizar saudação:', err);
@@ -276,91 +272,91 @@ export default function App() {
   const activeRecipientsCount = recipients.filter(r => r.active).length;
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* Top Header Bar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-950/50">
-              <MessageCircleHeart className="w-6 h-6" />
+    <div className="min-h-screen pb-24 bg-[#FAF8F5] text-[#382A1E]">
+      {/* Top Header Bar: Clean, Warm, Serene */}
+      <header className="border-b border-[#E8DFD3] bg-[#FAF8F5]/90 backdrop-blur-md sticky top-0 z-40 shadow-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#F4EFE6] border border-[#E8DFD3] flex items-center justify-center text-[#C59B27] shadow-xs">
+              <span className="text-xl leading-none">✝</span>
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-display font-bold text-[#382A1E] tracking-tight flex items-center gap-2">
                 Palavra do Dia
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  WhatsApp Automator
+                <span className="text-[10px] font-sans font-semibold px-2.5 py-0.5 rounded-full bg-[#F5EDE0] text-[#8E691A] border border-[#E8D9BD]">
+                  Devocional WhatsApp
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Envio automático e diário do versículo bíblico com imagem
+              <p className="text-xs text-[#7A6859] hidden sm:block">
+                Envio sereno e diário das escrituras sagradas para seus contatos
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {/* Quick Status Clickable Badge */}
             <button
               onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium transition-all cursor-pointer shadow-xs ${
                 isConnected
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                  ? 'bg-[#EBF7EE] border-[#C2E4C9] text-[#2D6A4F] hover:bg-[#E2F3E6]'
+                  : 'bg-[#FFF8EA] border-[#F0DCB3] text-[#A27318] hover:bg-[#FDF3DE]'
               }`}
               title="Clique para abrir a aba do WhatsApp"
             >
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-              <span>{isConnected ? 'WhatsApp Conectado' : 'Conectar WhatsApp'}</span>
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#2D6A4F]' : 'bg-[#D4A33B] animate-pulse'}`}></span>
+              <span>{isConnected ? 'WhatsApp Conectado' : 'Conectar Aparelho'}</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Anti-Ban: <strong className="text-emerald-400">Ativo</strong></span>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5EFE6] border border-[#E8DFD3] text-xs text-[#7A6859]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#C59B27]" />
+              <span>Anti-Bloqueio Ativo</span>
             </div>
           </div>
         </div>
 
-        {/* Navigation Tabs Bar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2">
-          <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none pb-2">
+        {/* Apple-Style Segmented Navigation Tabs */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-1 pb-3">
+          <div className="inline-flex p-1 rounded-2xl bg-[#EFE9DF] border border-[#E2D8C9] gap-1 overflow-x-auto max-w-full">
             {/* Tab 1: WhatsApp */}
             <button
               onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'whatsapp'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-white text-[#382A1E] shadow-sm'
+                  : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
-              <Smartphone className="w-4 h-4" />
+              <Smartphone className="w-3.5 h-3.5" />
               <span>Conexão WhatsApp</span>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-300' : 'bg-amber-400'}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#2D6A4F]' : 'bg-[#C59B27]'}`}></span>
             </button>
 
             {/* Tab 2: Message & Send */}
             <button
               onClick={() => setActiveTab('message')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'message'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-white text-[#382A1E] shadow-sm'
+                  : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
-              <BookOpen className="w-4 h-4" />
+              <BookOpen className="w-3.5 h-3.5" />
               <span>Mensagem & Envio</span>
             </button>
 
             {/* Tab 3: Recipients */}
             <button
               onClick={() => setActiveTab('recipients')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'recipients'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-white text-[#382A1E] shadow-sm'
+                  : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-3.5 h-3.5" />
               <span>Destinatários</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900 text-slate-300 border border-slate-700">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#FAF8F5] text-[#7A6859] border border-[#E8DFD3]">
                 {activeRecipientsCount}
               </span>
             </button>
@@ -368,27 +364,27 @@ export default function App() {
             {/* Tab 4: Logs */}
             <button
               onClick={() => setActiveTab('logs')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'logs'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-white text-[#382A1E] shadow-sm'
+                  : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
-              <History className="w-4 h-4" />
-              <span>Histórico & Logs</span>
+              <History className="w-3.5 h-3.5" />
+              <span>Histórico de Envios</span>
               {isDispatching && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C59B27] animate-ping"></span>
               )}
             </button>
-          </nav>
+          </div>
         </div>
       </header>
 
-      {/* Main Container Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+      {/* Main Content Area */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
         {/* TAB 1: CONEXÃO WHATSAPP */}
         {activeTab === 'whatsapp' && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-3xl mx-auto">
             <WhatsAppCard
               status={waStatus}
               onConnect={handleConnectWhatsApp}
@@ -401,7 +397,7 @@ export default function App() {
 
         {/* TAB 2: MENSAGEM & ENVIO */}
         {activeTab === 'message' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
             {/* Left Column: Verse Viewer, Image Attachment, Schedule Card */}
             <div className="lg:col-span-7 space-y-6">
               <VerseViewer
@@ -430,8 +426,8 @@ export default function App() {
               />
             </div>
 
-            {/* Right Column: Live WhatsApp Preview */}
-            <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-36">
+            {/* Right Column: Live Preview */}
+            <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-32">
               <LiveWhatsAppPreview
                 verseData={verseData}
                 caption={verseData?.custom_caption}
@@ -443,7 +439,7 @@ export default function App() {
 
         {/* TAB 3: DESTINATÁRIOS */}
         {activeTab === 'recipients' && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6">
             <RecipientPicker
               recipients={recipients}
               onSaveRecipients={handleSaveRecipients}
@@ -454,7 +450,7 @@ export default function App() {
 
         {/* TAB 4: HISTÓRICO & LOGS */}
         {activeTab === 'logs' && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6">
             <DispatchLogs
               logs={logs}
               liveProgress={liveProgress}

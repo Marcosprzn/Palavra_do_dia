@@ -5,51 +5,44 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    background-color: #090d16;
-    color: #f1f5f9;
+    background-color: #FAF8F5;
+    color: #382A1E;
+    letter-spacing: -0.01em;
   }
 }
 
-/* Glassmorphism panel styles */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* Apple-style Warm Devotional Cards */
+.church-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E8DFD3;
+  box-shadow: 0 4px 20px -2px rgba(56, 42, 30, 0.04), 0 2px 6px -1px rgba(56, 42, 30, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-panel-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-panel-hover:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.1);
+.church-card:hover {
+  border-color: #DBCFBF;
+  box-shadow: 0 8px 24px -4px rgba(56, 42, 30, 0.07), 0 3px 8px -2px rgba(56, 42, 30, 0.03);
 }
 
-/* Custom scrollbar */
+/* Parchment / Scripture Highlight Card */
+.scripture-card {
+  background: linear-gradient(180deg, #FDFBF8 0%, #F8F3EB 100%);
+  border: 1px solid #E4D8C5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 4px 16px -2px rgba(197, 155, 39, 0.06);
+}
+
+/* Custom delicate scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #F4EFE9;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
+  background: #D4C7B8;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.6);
-}
-
-/* Pulse animation for active sending status */
-@keyframes pulse-emerald {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.05); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-emerald 2s infinite ease-in-out;
+  background: #BFAEA0;
 }

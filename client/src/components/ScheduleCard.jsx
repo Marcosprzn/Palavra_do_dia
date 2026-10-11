@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Send, Check, Play, AlertTriangle } from 'lucide-react';
+import { Clock, Send, Check, AlertTriangle } from 'lucide-react';
 
 export default function ScheduleCard({
   scheduleTime,
@@ -24,66 +24,73 @@ export default function ScheduleCard({
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-6 relative">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
               Horário & Disparo
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#7A6859]">
               Configure o horário diário automático ou execute um envio agora mesmo
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
         {/* Daily Schedule Configuration */}
-        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-          <label className="text-xs font-semibold text-slate-300 block">
-            Horário do Envio Automático Diário:
-          </label>
+        <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3] space-y-3 flex flex-col justify-between">
+          <div>
+            <label className="text-xs font-semibold text-[#382A1E] block mb-1">
+              Horário do Envio Automático Diário:
+            </label>
+            <p className="text-[11px] text-[#7A6859]">
+              Dispara todos os dias sem precisar manter o navegador aberto.
+            </p>
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               type="time"
               value={timeInput}
               onChange={(e) => setTimeInput(e.target.value)}
-              className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm outline-none focus:border-amber-500"
+              className="px-3.5 py-2 rounded-xl bg-white border border-[#E8DFD3] text-[#382A1E] font-mono text-sm outline-none focus:border-[#C59B27] shadow-xs"
             />
             <button
               onClick={handleSave}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-xs ${
                 savedFeedback
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                  ? 'bg-[#2D6A4F] text-white'
+                  : 'bg-white hover:bg-[#F6F1EA] text-[#382A1E] border border-[#E8DFD3]'
               }`}
             >
               {savedFeedback ? <Check className="w-4 h-4" /> : null}
-              {savedFeedback ? 'Salvo!' : 'Salvar Horário'}
+              {savedFeedback ? 'Salvo!' : 'Salvar'}
             </button>
           </div>
-          <p className="text-[11px] text-slate-400">
-            Padrão <strong>06:00</strong> da manhã. Dispara todos os dias sem precisar abrir o app.
-          </p>
         </div>
 
         {/* Immediate Dispatch Button */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 to-slate-900/60 border border-emerald-500/30 space-y-2 flex flex-col justify-center">
+        <div className="p-5 rounded-2xl bg-[#FDFBF7] border border-[#E8DFD3] space-y-3 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-400">Envio Imediato:</span>
-            <span className="text-[11px] text-slate-400">
-              {activeRecipientsCount} destinatário(s) selecionado(s)
+            <span className="text-xs font-semibold text-[#8E691A]">Envio Imediato:</span>
+            <span className="text-[11px] text-[#7A6859]">
+              {activeRecipientsCount} contato(s) ativo(s)
             </span>
           </div>
+
+          <p className="text-[11px] text-[#7A6859]">
+            Envie a mensagem agora mesmo com intervalo anti-ban para a lista.
+          </p>
 
           <button
             onClick={() => setConfirmModal(true)}
             disabled={isDispatching || activeRecipientsCount === 0}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 rounded-xl bg-[#382A1E] hover:bg-[#251B12] text-white font-semibold text-xs tracking-wide shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isDispatching ? (
               <>
@@ -92,7 +99,7 @@ export default function ScheduleCard({
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4 text-[#C59B27]" />
                 Disparar Agora (Manual)
               </>
             )}
@@ -102,25 +109,25 @@ export default function ScheduleCard({
 
       {/* Confirmation Modal */}
       {confirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 text-amber-400 mb-3">
+        <div className="fixed inset-0 z-50 bg-[#382A1E]/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E8DFD3] rounded-3xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-3 text-[#A27318] mb-3">
               <AlertTriangle className="w-6 h-6" />
-              <h3 className="font-bold text-base text-white">Confirmar Disparo Manual?</h3>
+              <h3 className="font-bold text-base text-[#382A1E]">Confirmar Disparo Manual?</h3>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              Você está prestes a enviar o versículo do dia para <strong>{activeRecipientsCount}</strong> contatos selecionados. As mensagens serão enviadas com intervalo humanizado seguro anti-ban.
+            <p className="text-xs text-[#7A6859] leading-relaxed mb-4">
+              Você está prestes a enviar o versículo do dia para <strong>{activeRecipientsCount}</strong> contatos selecionados. As mensagens serão enviadas de forma individual e com intervalo humanizado anti-bloqueio.
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmModal(false)}
-                className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300"
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#7A6859] border border-[#E8DFD3] transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmDispatch}
-                className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white"
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#382A1E] hover:bg-[#251B12] text-white transition-all cursor-pointer shadow-xs"
               >
                 Sim, Iniciar Envio
               </button>

@@ -11,36 +11,36 @@ export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
     : null;
 
   return (
-    <div className="glass-panel rounded-2xl p-6 relative flex flex-col">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3] flex flex-col">
+      <div className="flex items-center gap-3.5 mb-5">
+        <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
           <Eye className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            Pré-visualização ao Vivo
+          <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+            Pré-visualização
           </h2>
-          <p className="text-xs text-slate-400">
-            Veja exatamente como a mensagem chegará no WhatsApp dos seus contatos
+          <p className="text-xs text-[#7A6859]">
+            Exibição exata no WhatsApp dos destinatários
           </p>
         </div>
       </div>
 
-      {/* Simulated Phone WhatsApp Container */}
-      <div className="rounded-2xl overflow-hidden border border-slate-700/80 shadow-2xl bg-[#0b141a] flex flex-col flex-1 max-w-sm mx-auto w-full">
+      {/* Simulated Phone WhatsApp Container - Authentic WhatsApp Chat in Light Theme */}
+      <div className="rounded-3xl overflow-hidden border border-[#E8DFD3] shadow-sm bg-[#EFEAE2] flex flex-col flex-1 max-w-sm mx-auto w-full">
         {/* WhatsApp Chat Header */}
-        <div className="bg-[#202c33] px-3.5 py-2.5 flex items-center justify-between border-b border-slate-800">
+        <div className="bg-[#008069] px-3.5 py-3 flex items-center justify-between text-white shadow-xs">
           <div className="flex items-center gap-2.5">
-            <ArrowLeft className="w-4 h-4 text-slate-400" />
-            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+            <ArrowLeft className="w-4 h-4 text-white/90" />
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold border border-white/30">
               ✝️
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-100">Palavra do Dia</h4>
-              <p className="text-[10px] text-emerald-400 font-medium">online</p>
+              <h4 className="text-xs font-bold text-white leading-tight">Palavra do Dia</h4>
+              <p className="text-[10px] text-white/80 font-normal">online</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-white/90">
             <Video className="w-3.5 h-3.5" />
             <Phone className="w-3.5 h-3.5" />
             <MoreVertical className="w-3.5 h-3.5" />
@@ -49,15 +49,15 @@ export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
 
         {/* WhatsApp Chat Body */}
         <div
-          className="p-4 flex-1 flex flex-col justify-end min-h-[300px]"
+          className="p-3.5 flex-1 flex flex-col justify-end min-h-[340px]"
           style={{
-            backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px)`,
             backgroundSize: '16px 16px',
-            backgroundColor: '#0b141a'
+            backgroundColor: '#EFEAE2'
           }}
         >
-          {/* Outgoing Message Bubble */}
-          <div className="self-end max-w-[92%] rounded-2xl rounded-tr-none bg-[#005c4b] text-slate-100 shadow-md overflow-hidden text-xs">
+          {/* Outgoing Message Bubble (WhatsApp Authentic Light Green Bubble: #E7FFDB) */}
+          <div className="self-end max-w-[94%] rounded-2xl rounded-tr-none bg-[#E7FFDB] text-[#111B21] shadow-xs overflow-hidden text-xs border border-[#D5F0C6]">
             {/* Attached Image inside bubble */}
             {resolvedImageUrl && (
               <div className="p-1">
@@ -76,30 +76,30 @@ export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
             {/* Caption & Verse Content */}
             <div className="p-3">
               {caption && caption.trim() !== '' && (
-                <p className="mb-2.5 text-slate-100 whitespace-pre-wrap leading-relaxed">
+                <p className="mb-2.5 text-[#111B21] whitespace-pre-wrap leading-relaxed text-xs">
                   {caption}
                 </p>
               )}
 
               {currentVerse && (
                 <div className="space-y-1">
-                  <p className="font-bold text-emerald-200">
+                  <p className="font-bold text-[#008069] text-xs">
                     📖 {currentVerse.reference}
                   </p>
-                  <p className="italic text-slate-100 leading-relaxed font-serif">
+                  <p className="italic text-[#111B21] leading-relaxed font-serif text-[13px]">
                     "{currentVerse.text}"
                   </p>
                 </div>
               )}
 
-              <p className="mt-2 text-[11px] text-emerald-300 font-medium">
+              <p className="mt-2.5 text-[11px] text-[#008069] font-medium">
                 ✨ <em>Palavra do Dia</em>
               </p>
 
               {/* Message Timestamp & Double Blue Ticks */}
-              <div className="flex items-center justify-end gap-1 mt-1.5 text-[10px] text-slate-300">
+              <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#667781]">
                 <span>{timeString}</span>
-                <CheckCheck className="w-3.5 h-3.5 text-sky-400" />
+                <CheckCheck className="w-3.5 h-3.5 text-[#53BDEB]" />
               </div>
             </div>
           </div>

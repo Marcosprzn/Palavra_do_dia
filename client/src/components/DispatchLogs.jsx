@@ -3,58 +3,58 @@ import { History, CheckCircle, XCircle, Image as ImageIcon, FileText } from 'luc
 
 export default function DispatchLogs({ logs, liveProgress, isDispatching }) {
   return (
-    <div className="glass-panel rounded-2xl p-6 relative">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20">
+    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex items-center gap-3.5 mb-5">
+        <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
           <History className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
             Histórico & Logs de Envio
           </h2>
-          <p className="text-xs text-slate-400">
-            Acompanhe em tempo real o progresso dos disparos e o status de entrega
+          <p className="text-xs text-[#7A6859]">
+            Acompanhe o andamento dos disparos e o registro de entrega de cada mensagem
           </p>
         </div>
       </div>
 
       {/* Live Sending Progress Banner */}
       {isDispatching && liveProgress && (
-        <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 mb-4 animate-pulse-subtle">
-          <div className="flex items-center justify-between text-xs font-semibold text-emerald-300 mb-2">
+        <div className="p-4 rounded-2xl bg-[#EBF7EE] border border-[#C2E4C9] mb-5 shadow-xs">
+          <div className="flex items-center justify-between text-xs font-semibold text-[#2D6A4F] mb-2">
             <span>Enviando para: <strong>{liveProgress.currentRecipient || '...'}</strong></span>
             <span>{liveProgress.current} de {liveProgress.total} ({liveProgress.percentage}%)</span>
           </div>
-          <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-white rounded-full h-2.5 overflow-hidden border border-[#C2E4C9]">
             <div
-              className="bg-emerald-500 h-2.5 rounded-full transition-all duration-300"
+              className="bg-[#2D6A4F] h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${liveProgress.percentage}%` }}
             ></div>
           </div>
-          <p className="text-[11px] text-emerald-400/80 mt-2 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-            Aguardando intervalo seguro humanizado anti-ban entre disparos...
+          <p className="text-[11px] text-[#2D6A4F] mt-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#2D6A4F] animate-pulse"></span>
+            Aguardando intervalo seguro anti-bloqueio entre mensagens...
           </p>
         </div>
       )}
 
       {/* Logs Table */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden">
-        <div className="max-h-56 overflow-y-auto">
+      <div className="rounded-2xl border border-[#E8DFD3] bg-[#FAF8F5] overflow-hidden">
+        <div className="max-h-64 overflow-y-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 font-semibold">
-                <th className="py-2.5 px-3">Destinatário</th>
-                <th className="py-2.5 px-3">Versículo</th>
-                <th className="py-2.5 px-3">Mídia</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">Horário</th>
+              <tr className="border-b border-[#E8DFD3] bg-[#FAF8F5] text-[#7A6859] font-semibold">
+                <th className="py-3 px-4">Destinatário</th>
+                <th className="py-3 px-4">Versículo</th>
+                <th className="py-3 px-4">Mídia</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Horário</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/40 text-slate-300">
+            <tbody className="divide-y divide-[#E8DFD3] text-[#382A1E] bg-white">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-500">
+                  <td colSpan={5} className="text-center py-10 text-[#A8988B] bg-[#FAF8F5]">
                     Nenhum disparo registrado ainda.
                   </td>
                 </tr>
@@ -65,36 +65,36 @@ export default function DispatchLogs({ logs, liveProgress, isDispatching }) {
                     : '--:--';
 
                   return (
-                    <tr key={log.id} className="hover:bg-slate-900/40">
-                      <td className="py-2.5 px-3 font-medium text-slate-100">
+                    <tr key={log.id} className="hover:bg-[#FAF8F5] transition-colors">
+                      <td className="py-3 px-4 font-medium text-[#382A1E]">
                         {log.recipient_name || log.recipient_jid}
                       </td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-semibold">
+                      <td className="py-3 px-4 text-[#8E691A] font-semibold">
                         {log.verse_ref || 'Versículo'}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-4">
                         {log.has_image ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-sky-400">
-                            <ImageIcon className="w-3 h-3" /> Imagem
+                          <span className="inline-flex items-center gap-1 text-[11px] text-[#7A6859]">
+                            <ImageIcon className="w-3.5 h-3.5 text-[#C59B27]" /> Imagem
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
-                            <FileText className="w-3 h-3" /> Texto
+                          <span className="inline-flex items-center gap-1 text-[11px] text-[#A8988B]">
+                            <FileText className="w-3.5 h-3.5" /> Texto
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-4">
                         {log.status === 'success' ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
-                            <CheckCircle className="w-3.5 h-3.5" /> Enviado
+                          <span className="inline-flex items-center gap-1 text-[11px] text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9] px-2 py-0.5 rounded-full font-medium">
+                            <CheckCircle className="w-3 h-3" /> Enviado
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-rose-400 font-medium" title={log.error_message}>
-                            <XCircle className="w-3.5 h-3.5" /> Falha
+                          <span className="inline-flex items-center gap-1 text-[11px] text-[#B93838] bg-[#FDF2F2] border border-[#F5CACA] px-2 py-0.5 rounded-full font-medium" title={log.error_message}>
+                            <XCircle className="w-3 h-3" /> Falha
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                      <td className="py-3 px-4 text-[#8E7B6C] font-mono text-[11px]">
                         {dateFormatted}
                       </td>
                     </tr>
