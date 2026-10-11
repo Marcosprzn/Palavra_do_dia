@@ -37,15 +37,26 @@ function randomBetween(min, max) {
 
 function formatMessageText(daily) {
   const parts = [];
-  if (daily.custom_caption && daily.custom_caption.trim() !== '') {
-    parts.push(daily.custom_caption.trim());
+  const customCaption = (daily.custom_caption || '').trim();
+
+  // Saudação matinal "Bom dia!"
+  const hasCustomBomDia = /^bom\s*dia/i.test(customCaption);
+  if (!hasCustomBomDia) {
+    parts.push('☀️ *Bom dia!*');
     parts.push('');
   }
+
+  if (customCaption !== '') {
+    parts.push(customCaption);
+    parts.push('');
+  }
+
   if (daily.verse) {
     parts.push(`📖 *${daily.verse.reference}*`);
     parts.push(`"${daily.verse.text}"`);
     parts.push('');
   }
+
   parts.push('✨ _Palavra do Dia_');
   return parts.join('\n');
 }

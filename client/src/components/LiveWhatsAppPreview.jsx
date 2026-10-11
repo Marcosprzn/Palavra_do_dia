@@ -75,6 +75,14 @@ export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
 
             {/* Caption & Verse Content */}
             <div className="p-3">
+              {/* Saudação matinal */}
+              {!/^bom\s*dia/i.test((caption || '').trim()) && (
+                <p className="mb-2 text-[#111B21] font-semibold text-xs flex items-center gap-1">
+                  <span>☀️</span>
+                  <span>Bom dia!</span>
+                </p>
+              )}
+
               {caption && caption.trim() !== '' && (
                 <p className="mb-2.5 text-[#111B21] whitespace-pre-wrap leading-relaxed text-xs">
                   {caption}
