@@ -605,6 +605,13 @@ async function logoutWhatsApp() {
   }
 }
 
+function removeContact(jid) {
+  if (jid) {
+    contactsMap.delete(jid);
+    broadcastContactsUpdate();
+  }
+}
+
 module.exports = {
   setSocketIo,
   getConnectionStatus,
@@ -616,6 +623,7 @@ module.exports = {
   useDatabaseAuthState,
   initWhatsApp,
   getContactsAndGroups,
+  removeContact,
   sendMessage,
   logoutWhatsApp
 };

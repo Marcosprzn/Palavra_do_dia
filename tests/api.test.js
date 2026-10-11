@@ -12,6 +12,7 @@ async function runTest() {
     fs.unlinkSync(testDbPath);
   }
   process.env.SQLITE_DB_PATH = testDbPath;
+  process.env.NODE_ENV = 'test';
   delete process.env.DATABASE_URL;
 
   const { app, startServer } = require('../server/index');

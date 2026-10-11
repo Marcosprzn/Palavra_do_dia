@@ -231,16 +231,9 @@ router.post('/schedule', async (req, res) => {
   }
 });
 
-// 6. Recipients (merge WhatsApp synced + DB)
+// 6. Recipients
 router.get('/recipients', async (req, res) => {
   try {
-    const waRecipients = whatsappService.getContactsAndGroups();
-
-    // Se houver contatos sincronizados pelo WhatsApp, auto-salva no banco (novos vêm com active=1)
-    if (waRecipients && waRecipients.length > 0) {
-      await db.autoUpsertRecipients(waRecipients);
-    }
-
     const dbRecipients = await db.getRecipients();
     const list = dbRecipients
       .filter(r => r.type !== 'group' && r.jid && r.jid.endsWith('@s.whatsapp.net') && !r.jid.includes('@lid') && !r.jid.includes('@newsletter') && !r.jid.includes('@g.us'))
@@ -308,6 +301,7 @@ router.delete('/recipients/:jid', async (req, res) => {
     if (!jid) {
       return res.status(400).json({ error: 'JID não informado.' });
     }
+    whatsappService.removeContact(jid);
     await db.deleteRecipient(jid);
     res.json({ success: true, message: 'Destinatário excluído com sucesso.' });
   } catch (err) {

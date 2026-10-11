@@ -39,6 +39,11 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS deleted_recipients (
+        jid VARCHAR(255) PRIMARY KEY,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS send_logs (
         id SERIAL PRIMARY KEY,
         recipient_jid VARCHAR(255),
@@ -99,6 +104,11 @@ async function initDatabase() {
         type TEXT DEFAULT 'individual',
         active INTEGER DEFAULT 1,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS deleted_recipients (
+        jid TEXT PRIMARY KEY,
+        deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS send_logs (
@@ -214,6 +224,8 @@ async function saveRecipients(list) {
       if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
         continue;
       }
+      // Se o usuário adicionou ou salvou explicitamente, remover da lista de deletados
+      await pgPool.query('DELETE FROM deleted_recipients WHERE jid = $1', [item.jid]);
       const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
       await pgPool.query(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
@@ -226,6 +238,7 @@ async function saveRecipients(list) {
       `, [item.jid, item.name || '', item.type || 'individual', activeVal]);
     }
   } else {
+    const unblockStmt = sqliteDb.prepare('DELETE FROM deleted_recipients WHERE jid = ?');
     const stmt = sqliteDb.prepare(`
       INSERT INTO recipients (jid, name, type, active, updated_at)
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -239,6 +252,7 @@ async function saveRecipients(list) {
       if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
         continue;
       }
+      unblockStmt.run(item.jid);
       const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
       stmt.run(item.jid, item.name || '', item.type || 'individual', activeVal);
     }
@@ -253,6 +267,10 @@ async function autoUpsertRecipients(list) {
     }
     const cleanName = (item.name || '').trim();
     if (isPostgres) {
+      // Ignorar se o usuário excluiu este contato
+      const checkDel = await pgPool.query('SELECT 1 FROM deleted_recipients WHERE jid = $1', [item.jid]);
+      if (checkDel.rows.length > 0) continue;
+
       await pgPool.query(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
         VALUES ($1, $2, $3, 1, NOW())
@@ -265,6 +283,9 @@ async function autoUpsertRecipients(list) {
           updated_at = NOW()
       `, [item.jid, cleanName, item.type || 'individual']);
     } else {
+      const checkStmt = sqliteDb.prepare('SELECT 1 FROM deleted_recipients WHERE jid = ?');
+      if (checkStmt.get(item.jid)) continue;
+
       const stmt = sqliteDb.prepare(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
         VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
@@ -284,8 +305,10 @@ async function autoUpsertRecipients(list) {
 async function deleteRecipient(jid) {
   if (!jid) return;
   if (isPostgres) {
+    await pgPool.query('INSERT INTO deleted_recipients (jid) VALUES ($1) ON CONFLICT (jid) DO NOTHING', [jid]);
     await pgPool.query('DELETE FROM recipients WHERE jid = $1', [jid]);
   } else {
+    sqliteDb.prepare('INSERT OR IGNORE INTO deleted_recipients (jid) VALUES (?)').run(jid);
     const stmt = sqliteDb.prepare('DELETE FROM recipients WHERE jid = ?');
     stmt.run(jid);
   }
