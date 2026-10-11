@@ -1,0 +1,32 @@
+{
+  "name": "palavra-do-dia",
+  "version": "1.0.0",
+  "description": "Disparador automatizado de Versículo do Dia via WhatsApp",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "build": "cd client && npm run build",
+    "test:db": "node tests/database.test.js",
+    "test:verse": "node tests/verseService.test.js",
+    "test:wa": "node tests/whatsappService.test.js",
+    "test:sched": "node tests/schedulerService.test.js",
+    "test:api": "node tests/api.test.js",
+    "test": "node tests/database.test.js && node tests/verseService.test.js && node tests/whatsappService.test.js && node tests/schedulerService.test.js && node tests/api.test.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.19",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "pg": "^8.13.3",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.0.0"
+  }
+}
