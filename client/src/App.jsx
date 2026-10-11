@@ -30,6 +30,7 @@ export default function App() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [liveProgress, setLiveProgress] = useState(null);
   const [loadingAction, setLoadingAction] = useState(false);
+  const [keepImageAttached, setKeepImageAttached] = useState(false);
 
   // Initialize Socket.io and fetch initial state
   useEffect(() => {
@@ -69,6 +70,10 @@ export default function App() {
       fetchLogs();
     });
 
+    socket.on('image_auto_removed', () => {
+      setVerseData(prev => ({ ...prev, image_path: null }));
+    });
+
     // Initial API fetches
     fetchInitialData();
 
@@ -102,6 +107,13 @@ export default function App() {
 
       // 4. Logs
       await fetchLogs();
+
+      // 5. Image Lock Setting
+      const lockRes = await fetch('/api/settings/image-lock');
+      const lockData = await lockRes.json();
+      if (lockData?.keep_image_attached !== undefined) {
+        setKeepImageAttached(lockData.keep_image_attached);
+      }
     } catch (err) {
       console.error('Erro ao carregar dados iniciais:', err);
     }
@@ -204,6 +216,19 @@ export default function App() {
       setVerseData(prev => ({ ...prev, image_path: null }));
     } catch (err) {
       console.error('Erro ao remover imagem:', err);
+    }
+  };
+
+  const handleToggleKeepImage = async (newVal) => {
+    setKeepImageAttached(newVal);
+    try {
+      await fetch('/api/settings/image-lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keep_image_attached: newVal })
+      });
+    } catch (err) {
+      console.error('Erro ao atualizar opção de travar imagem:', err);
     }
   };
 
@@ -390,8 +415,10 @@ export default function App() {
 
               <ImageAttachment
                 imagePath={verseData?.image_path}
+                keepImageAttached={keepImageAttached}
                 onUploadSuccess={handleUploadSuccess}
                 onRemoveImage={handleRemoveImage}
+                onToggleKeepImage={handleToggleKeepImage}
               />
 
               <ScheduleCard

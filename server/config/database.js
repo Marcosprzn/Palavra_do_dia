@@ -162,6 +162,11 @@ async function getSettings() {
   }
 }
 
+async function getSetting(key, defaultValue = null) {
+  const settings = await getSettings();
+  return settings[key] !== undefined ? settings[key] : defaultValue;
+}
+
 async function updateSetting(key, value) {
   if (isPostgres) {
     await pgPool.query(`
@@ -385,6 +390,7 @@ module.exports = {
   getDb,
   initDatabase,
   getSettings,
+  getSetting,
   updateSetting,
   getRecipients,
   saveRecipients,

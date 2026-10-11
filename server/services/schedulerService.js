@@ -1,3 +1,4 @@
+const fs = require('fs');
 const cron = require('node-cron');
 const db = require('../config/database');
 const verseService = require('./verseService');
@@ -125,6 +126,23 @@ async function dispatchToRecipients(options = {}) {
       if (i < total - 1 && maxDelayMs > 0) {
         const delay = randomBetween(minDelayMs, maxDelayMs);
         await sleep(delay);
+      }
+    }
+
+    // Exclusão automática da imagem após disparo se a opção "travar imagem" estiver desativada
+    const keepImageAttached = (await db.getSetting('keep_image_attached', 'false')) === 'true';
+    if (!keepImageAttached && imagePath) {
+      console.log('🗑️ Opção de fixar imagem está DESATIVADA: Excluindo imagem anexada após o envio...');
+      try {
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      } catch (err) {
+        console.error('Erro ao deletar arquivo de imagem após envio:', err);
+      }
+      await verseService.updateCustomImage(null);
+      if (ioInstance) {
+        ioInstance.emit('image_auto_removed', { message: 'Imagem do dia excluída automaticamente após o envio.' });
       }
     }
 

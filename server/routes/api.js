@@ -158,6 +158,27 @@ router.delete('/upload', async (req, res) => {
   }
 });
 
+// Configuração de Travar/Fixar Imagem Anexada
+router.get('/settings/image-lock', async (req, res) => {
+  try {
+    const val = await db.getSetting('keep_image_attached', 'false');
+    res.json({ keep_image_attached: val === 'true' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/settings/image-lock', async (req, res) => {
+  try {
+    const { keep_image_attached } = req.body;
+    const strVal = keep_image_attached ? 'true' : 'false';
+    await db.updateSetting('keep_image_attached', strVal);
+    res.json({ success: true, keep_image_attached: keep_image_attached === true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 5. Schedule
 router.get('/schedule', async (req, res) => {
   try {

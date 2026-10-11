@@ -1,7 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, UploadCloud, Trash2, Eye, CheckCircle2 } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud, Trash2, CheckCircle2, Lock, Unlock } from 'lucide-react';
 
-export default function ImageAttachment({ imagePath, onUploadSuccess, onRemoveImage }) {
+export default function ImageAttachment({
+  imagePath,
+  keepImageAttached,
+  onUploadSuccess,
+  onRemoveImage,
+  onToggleKeepImage
+}) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
@@ -90,7 +96,6 @@ export default function ImageAttachment({ imagePath, onUploadSuccess, onRemoveIm
             alt="Imagem Anexada"
             className="w-full h-48 object-cover rounded-xl"
             onError={(e) => {
-              // Fallback if full local path
               const filename = imagePath.split(/[\\/]/).pop();
               e.target.src = `/uploads/${filename}`;
             }}
@@ -98,13 +103,13 @@ export default function ImageAttachment({ imagePath, onUploadSuccess, onRemoveIm
           <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium border border-slate-600 transition-all"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium border border-slate-600 transition-all cursor-pointer"
             >
               Trocar Imagem
             </button>
             <button
               onClick={onRemoveImage}
-              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition-all"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition-all cursor-pointer"
             >
               Excluir
             </button>
@@ -133,6 +138,46 @@ export default function ImageAttachment({ imagePath, onUploadSuccess, onRemoveIm
           </p>
         </div>
       )}
+
+      {/* Lock / Auto-Delete Setting Toggle */}
+      <div className="mt-4 p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${keepImageAttached ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
+            {keepImageAttached ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold text-slate-200 flex items-center gap-2">
+              {keepImageAttached ? 'Imagem Travada / Fixa' : 'Trocar Imagem Todo Dia'}
+              <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                keepImageAttached ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/10 text-emerald-400'
+              }`}>
+                {keepImageAttached ? 'Permanente' : 'Excluir pós-disparo'}
+              </span>
+            </h4>
+            <p className="text-[11px] text-slate-400">
+              {keepImageAttached
+                ? 'A imagem permanecerá anexada fixa para os próximos envios.'
+                : 'A imagem será excluída automaticamente após o envio para você anexar a nova imagem de amanhã.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Toggle Switch */}
+        <button
+          type="button"
+          onClick={() => onToggleKeepImage(!keepImageAttached)}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            keepImageAttached ? 'bg-amber-500' : 'bg-slate-700'
+          }`}
+          title="Alternar entre travar imagem ou excluir automaticamente após o envio"
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              keepImageAttached ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      </div>
 
       <input
         ref={fileInputRef}
