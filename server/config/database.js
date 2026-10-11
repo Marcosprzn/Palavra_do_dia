@@ -55,6 +55,14 @@ async function initDatabase() {
         image_path TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS baileys_sessions (
+        session_id VARCHAR(100) NOT NULL,
+        key_id VARCHAR(255) NOT NULL,
+        data TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, key_id)
+      );
     `);
 
     // Insert default settings if not exists
@@ -108,6 +116,14 @@ async function initDatabase() {
         custom_caption TEXT,
         image_path TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS baileys_sessions (
+        session_id TEXT NOT NULL,
+        key_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, key_id)
       );
     `);
 
@@ -291,6 +307,66 @@ async function saveDailyVerseState({ date_str, verse_data, custom_caption, image
   }
 }
 
+async function getSessionKey(sessionId, keyId) {
+  if (isPostgres) {
+    const res = await pgPool.query(
+      'SELECT data FROM baileys_sessions WHERE session_id = $1 AND key_id = $2',
+      [sessionId, keyId]
+    );
+    return res.rows.length > 0 ? res.rows[0].data : null;
+  } else {
+    const stmt = sqliteDb.prepare(
+      'SELECT data FROM baileys_sessions WHERE session_id = ? AND key_id = ?'
+    );
+    const row = stmt.get(sessionId, keyId);
+    return row ? row.data : null;
+  }
+}
+
+async function setSessionKey(sessionId, keyId, data) {
+  if (isPostgres) {
+    await pgPool.query(`
+      INSERT INTO baileys_sessions (session_id, key_id, data, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (session_id, key_id) DO UPDATE SET
+        data = EXCLUDED.data,
+        updated_at = NOW()
+    `, [sessionId, keyId, data]);
+  } else {
+    const stmt = sqliteDb.prepare(`
+      INSERT INTO baileys_sessions (session_id, key_id, data, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT (session_id, key_id) DO UPDATE SET
+        data = excluded.data,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(sessionId, keyId, data);
+  }
+}
+
+async function deleteSessionKey(sessionId, keyId) {
+  if (isPostgres) {
+    await pgPool.query(
+      'DELETE FROM baileys_sessions WHERE session_id = $1 AND key_id = $2',
+      [sessionId, keyId]
+    );
+  } else {
+    const stmt = sqliteDb.prepare(
+      'DELETE FROM baileys_sessions WHERE session_id = ? AND key_id = ?'
+    );
+    stmt.run(sessionId, keyId);
+  }
+}
+
+async function clearSession(sessionId) {
+  if (isPostgres) {
+    await pgPool.query('DELETE FROM baileys_sessions WHERE session_id = $1', [sessionId]);
+  } else {
+    const stmt = sqliteDb.prepare('DELETE FROM baileys_sessions WHERE session_id = ?');
+    stmt.run(sessionId);
+  }
+}
+
 async function closeDatabase() {
   if (isPostgres && pgPool) {
     await pgPool.end();
@@ -312,5 +388,9 @@ module.exports = {
   getSendLogs,
   getDailyVerseState,
   saveDailyVerseState,
+  getSessionKey,
+  setSessionKey,
+  deleteSessionKey,
+  clearSession,
   closeDatabase
 };

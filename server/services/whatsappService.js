@@ -5,10 +5,14 @@ const QRCode = require('qrcode');
 const {
   default: makeWASocket,
   DisconnectReason,
-  useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  Browsers
+  Browsers,
+  BufferJSON,
+  initAuthCreds,
+  proto
 } = require('@whiskeysockets/baileys');
+
+const db = require('../config/database');
 
 let sock = null;
 let ioInstance = null;
@@ -46,13 +50,12 @@ function formatJid(input) {
   if (clean.includes('@s.whatsapp.net') || clean.includes('@g.us')) {
     return clean;
   }
-  // Strip non-digits
   const digits = clean.replace(/\D/g, '');
   return `${digits}@s.whatsapp.net`;
 }
 
 function formatMessagePayload(text, imagePath) {
-  if (imagePath && fs.existsSync(imagePath)) {
+  if (imagePath && (fs.existsSync(imagePath) || imagePath.startsWith('http') || imagePath.startsWith('data:'))) {
     return {
       image: { url: imagePath },
       caption: text || ''
@@ -63,21 +66,87 @@ function formatMessagePayload(text, imagePath) {
   };
 }
 
+/**
+ * Custom Auth State Adapter for Database Storage (Supabase PostgreSQL / SQLite)
+ * Keeps WhatsApp authenticated across Render.com restarts and re-deployments!
+ */
+async function useDatabaseAuthState(sessionId = 'default') {
+  const credsRaw = await db.getSessionKey(sessionId, 'creds');
+  let creds;
+  if (credsRaw) {
+    try {
+      creds = JSON.parse(credsRaw, BufferJSON.reviver);
+    } catch (e) {
+      console.error('Erro ao ler credenciais salvas do banco, inicializando novas:', e);
+      creds = initAuthCreds();
+    }
+  } else {
+    creds = initAuthCreds();
+  }
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: async (type, ids) => {
+          const data = {};
+          await Promise.all(
+            ids.map(async (id) => {
+              const raw = await db.getSessionKey(sessionId, `${type}-${id}`);
+              if (raw) {
+                try {
+                  let value = JSON.parse(raw, BufferJSON.reviver);
+                  if (type === 'app-state-sync-key' && value) {
+                    value = proto.Message.AppStateSyncKeyData.fromObject(value);
+                  }
+                  data[id] = value;
+                } catch (e) {
+                  console.error(`Erro ao decodificar chave ${type}-${id}:`, e);
+                }
+              }
+            })
+          );
+          return data;
+        },
+        set: async (data) => {
+          const tasks = [];
+          for (const category in data) {
+            for (const id in data[category]) {
+              const value = data[category][id];
+              const keyId = `${category}-${id}`;
+              if (value) {
+                const serialized = JSON.stringify(value, BufferJSON.replacer);
+                tasks.push(db.setSessionKey(sessionId, keyId, serialized));
+              } else {
+                tasks.push(db.deleteSessionKey(sessionId, keyId));
+              }
+            }
+          }
+          await Promise.all(tasks);
+        }
+      }
+    },
+    saveCreds: async () => {
+      const serialized = JSON.stringify(creds, BufferJSON.replacer);
+      await db.setSessionKey(sessionId, 'creds', serialized);
+    },
+    clearSession: async () => {
+      await db.clearSession(sessionId);
+    }
+  };
+}
+
 async function initWhatsApp(io) {
   if (io) {
     ioInstance = io;
   }
 
-  const sessionDir = process.env.SESSION_DATA_PATH || path.join(__dirname, '../../sessions');
-  if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-  }
-
   try {
     broadcastStatus('connecting');
 
-    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-    const { version, isLatest } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
+    // Load auth state from Database (Supabase PostgreSQL / SQLite)
+    const { state, saveCreds, clearSession } = await useDatabaseAuthState('default');
+    const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
 
     const logger = pino({ level: 'silent' });
 
@@ -102,29 +171,29 @@ async function initWhatsApp(io) {
           const qrDataUrl = await QRCode.toDataURL(qr, { scale: 8, margin: 2 });
           broadcastStatus('qr_ready', { qrCode: qrDataUrl, user: null });
         } catch (err) {
-          console.error('Error generating QR Code data URL:', err);
+          console.error('Erro ao gerar imagem QR Code:', err);
         }
       }
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-        console.log(`Baileys connection closed (status: ${statusCode}). Reconnect: ${shouldReconnect}`);
+        console.log(`Conexão Baileys encerrada (código: ${statusCode}). Reconectar: ${shouldReconnect}`);
 
         broadcastStatus('disconnected', { qrCode: null, user: null });
 
         if (shouldReconnect) {
           setTimeout(() => initWhatsApp(ioInstance), 3000);
         } else {
-          // Logged out - clear session directory
+          // Desconectado explicitamente pelo usuário no celular - limpar sessão do Supabase/banco
           try {
-            fs.rmSync(sessionDir, { recursive: true, force: true });
+            await clearSession();
           } catch (e) {
-            console.error('Error clearing session dir:', e);
+            console.error('Erro ao limpar sessão do banco:', e);
           }
         }
       } else if (connection === 'open') {
-        console.log('Baileys WhatsApp connection successfully opened!');
+        console.log('✅ Conexão Baileys WhatsApp estabelecida com sucesso!');
         const user = {
           id: sock.user?.id ? sock.user.id.split(':')[0] : '',
           name: sock.user?.name || 'WhatsApp User'
@@ -133,7 +202,7 @@ async function initWhatsApp(io) {
       }
     });
 
-    // Sync contacts
+    // Sincronizar contatos
     sock.ev.on('contacts.upsert', (contacts) => {
       for (const c of contacts) {
         if (c.id && !c.id.includes('@g.us')) {
@@ -160,7 +229,7 @@ async function initWhatsApp(io) {
       broadcastContactsUpdate();
     });
 
-    // Sync groups
+    // Sincronizar grupos
     sock.ev.on('chats.upsert', (chats) => {
       for (const chat of chats) {
         if (chat.id && chat.id.includes('@g.us')) {
@@ -176,7 +245,7 @@ async function initWhatsApp(io) {
 
     return sock;
   } catch (err) {
-    console.error('Error initializing WhatsApp socket:', err);
+    console.error('Erro ao inicializar WhatsApp:', err);
     broadcastStatus('disconnected', { qrCode: null, user: null });
     return null;
   }
@@ -205,18 +274,16 @@ async function sendMessage(jid, text, imagePath = null) {
 }
 
 async function logoutWhatsApp() {
-  const sessionDir = process.env.SESSION_DATA_PATH || path.join(__dirname, '../../sessions');
   try {
     if (sock) {
       await sock.logout().catch(() => {});
       sock.end();
       sock = null;
     }
-    if (fs.existsSync(sessionDir)) {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
-    }
+    // Remove session data from Database (Supabase PostgreSQL / SQLite)
+    await db.clearSession('default');
   } catch (err) {
-    console.error('Error during WhatsApp logout:', err);
+    console.error('Erro ao deslogar WhatsApp:', err);
   } finally {
     contactsMap.clear();
     groupsMap.clear();
@@ -230,6 +297,7 @@ module.exports = {
   broadcastStatus,
   formatJid,
   formatMessagePayload,
+  useDatabaseAuthState,
   initWhatsApp,
   getContactsAndGroups,
   sendMessage,

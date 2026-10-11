@@ -8,7 +8,7 @@
     "dev": "node server/index.js",
     "install:all": "npm install && npm --prefix client install",
     "build": "npm --prefix client install && npm --prefix client run build",
-    "test": "node tests/database.test.js && node tests/verseService.test.js && node tests/whatsappService.test.js && node tests/schedulerService.test.js && node tests/api.test.js"
+    "test": "node tests/database.test.js && node tests/verseService.test.js && node tests/whatsappService.test.js && node tests/authState.test.js && node tests/schedulerService.test.js && node tests/api.test.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.19",

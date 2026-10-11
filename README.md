@@ -8,10 +8,10 @@ Desenvolvido com **Node.js**, **Express**, **Socket.IO**, **@whiskeysockets/bail
 
 ## ✨ Funcionalidades Principais
 
-1. **Conexão Direta com WhatsApp (Baileys)**:
+1. **Conexão Direta com WhatsApp (Baileys) com Sessão no Banco**:
    - Pareamento instantâneo via QR Code em tempo real no painel web.
-   - Gerenciamento de sessão persistente (`useMultiFileAuthState`) para manter a conexão ativa.
-   - Sincronização automática de contatos e grupos.
+   - **Autenticação salva diretamente no Supabase PostgreSQL** (tabela `baileys_sessions`), garantindo que a sessão nunca caia ou expire mesmo após reinicializações, suspensões ou deploys no **Render.com**.
+   - Sincronização automática de contatos e grupos com contador e seleção.
 
 2. **Versículo do Dia Automático + Seleção Manual**:
    - Base curada de centenas de versículos bíblicos em português (Salmos, Provérbios, Evangelhos, Epístolas).
