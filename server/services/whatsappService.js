@@ -340,13 +340,29 @@ async function initWhatsApp(io, forceNew = false) {
         };
         broadcastStatus('connected', { qrCode: null, user });
         qrEvents.emit('connected');
+
+        // Disparar sincronização do App State (contatos salvos na agenda do aparelho)
+        setTimeout(async () => {
+          try {
+            const { ALL_WA_PATCH_NAMES } = require('@whiskeysockets/baileys');
+            if (currentSocket && typeof currentSocket.resyncAppState === 'function') {
+              console.log('[WhatsApp] 🔄 Solicitando App State Sync para nomes da agenda...');
+              await currentSocket.resyncAppState(ALL_WA_PATCH_NAMES, false);
+            }
+          } catch (e) {
+            console.warn('[WhatsApp] Aviso ao sincronizar App State:', e.message);
+          }
+        }, 4000);
       }
     });
 
     // Função utilitária para formatar nome exibível de contato
     function formatDisplayName(name, jid) {
-      if (name && name.trim() !== '' && name !== jid) {
-        return name.trim();
+      if (name && typeof name === 'string') {
+        const trimmed = name.trim();
+        if (trimmed !== '' && trimmed !== jid && !trimmed.startsWith('+') && !/^[0-9 ()-]+$/.test(trimmed)) {
+          return trimmed;
+        }
       }
       const digits = (jid || '').replace(/@.*$/, '').replace(/\D/g, '');
       if (digits.length >= 10) {
@@ -476,33 +492,54 @@ async function initWhatsApp(io, forceNew = false) {
     currentSocket.ev.on('chats.set', ({ chats }) => handleChats(chats));
     currentSocket.ev.on('chats.update', handleChats);
 
-    currentSocket.ev.on('messaging-history.set', async ({ contacts, chats, isLatest, syncType }) => {
-      console.log(`[WhatsApp] 📥 Histórico recebido: ${contacts?.length || 0} contatos da agenda, ${chats?.length || 0} conversas ativas/arquivadas`);
+    // Processar mensagens históricas ou novas para enriquecer com o PushName (nome real do WhatsApp)
+    const handleMessages = async (messages) => {
+      if (!Array.isArray(messages)) return;
+      const selfJid = currentSocket.user?.id;
+      const batch = [];
+      for (const m of messages) {
+        const jid = m.key?.remoteJid;
+        if (!isRealIndividualUser(jid, selfJid)) continue;
+        if (m.pushName && typeof m.pushName === 'string' && m.pushName.trim() !== '') {
+          const pushName = m.pushName.trim();
+          if (!pushName.startsWith('+') && !/^[0-9 ()-]+$/.test(pushName)) {
+            const existing = contactsMap.get(jid);
+            if (!existing || !existing.name || existing.name.startsWith('+') || /^[0-9 ()-]+$/.test(existing.name)) {
+              const obj = {
+                jid,
+                name: pushName,
+                type: 'individual'
+              };
+              contactsMap.set(jid, obj);
+              batch.push(obj);
+            }
+          }
+        }
+      }
+      if (batch.length > 0) {
+        try {
+          await db.autoUpsertRecipients(batch);
+        } catch (e) {
+          console.warn('[WhatsApp] Erro ao auto-salvar nomes reais de mensagens:', e.message);
+        }
+        broadcastContactsUpdate();
+      }
+    };
+
+    currentSocket.ev.on('messaging-history.set', async ({ contacts, chats, messages, isLatest, syncType }) => {
+      console.log(`[WhatsApp] 📥 Histórico recebido: ${contacts?.length || 0} contatos da agenda, ${chats?.length || 0} conversas ativas/arquivadas, ${messages?.length || 0} mensagens`);
       if (contacts) await handleAddContacts(contacts);
       if (Array.isArray(chats)) {
         await handleChats(chats);
       }
+      if (Array.isArray(messages)) {
+        await handleMessages(messages);
+      }
     });
 
-    // Atualizar pushName se recebido, mas nunca criar destinatários de grupos/LIDs em messages.upsert
+    // Atualizar pushName se recebido em mensagens em tempo real
     currentSocket.ev.on('messages.upsert', async ({ messages }) => {
-      if (!Array.isArray(messages)) return;
-      const selfJid = currentSocket.user?.id;
-      let updated = false;
-      for (const m of messages) {
-        const jid = m.key?.remoteJid;
-        if (isRealIndividualUser(jid, selfJid) && contactsMap.has(jid)) {
-          const existing = contactsMap.get(jid);
-          if (m.pushName && (!existing.name || existing.name === jid || existing.name.startsWith('+'))) {
-            existing.name = formatDisplayName(m.pushName, jid);
-            contactsMap.set(jid, existing);
-            updated = true;
-          }
-        }
-      }
-      if (updated) {
-        broadcastContactsUpdate();
-      }
+      await handleMessages(messages);
     });
 
     return sock;

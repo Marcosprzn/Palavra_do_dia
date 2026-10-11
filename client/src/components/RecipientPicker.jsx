@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Users, Search, CheckSquare, Square, Check, Filter, RefreshCw, Info, Trash2, UserPlus, X } from 'lucide-react';
+import { Users, Search, CheckSquare, Square, Check, Filter, RefreshCw, Info, Trash2, UserPlus, X, Edit2 } from 'lucide-react';
+
+function isRealName(name) {
+  if (!name || typeof name !== 'string') return false;
+  const trimmed = name.trim();
+  if (trimmed === '' || trimmed.startsWith('+') || /^[0-9 ()-]+$/.test(trimmed)) {
+    return false;
+  }
+  return true;
+}
 
 function formatPhoneDisplay(jid) {
   if (!jid) return '';
@@ -36,6 +45,10 @@ export default function RecipientPicker({
   const [newPhone, setNewPhone] = useState('');
   const [addingError, setAddingError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+
+  // Inline Rename State
+  const [editingJid, setEditingJid] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   // Deleting State (by JID)
   const [deletingJid, setDeletingJid] = useState(null);
@@ -94,7 +107,7 @@ export default function RecipientPicker({
     setAddingError('');
     const cleanPhone = newPhone.replace(/\D/g, '');
     if (cleanPhone.length < 8) {
-      setAddingError('Informe um número de WhatsApp válido com DDD (ex: 11 99999-8888).');
+      setAddingError('Informe um número de WhatsApp válido com DDD (ex: 81 99999-8888).');
       return;
     }
 
@@ -114,6 +127,30 @@ export default function RecipientPicker({
       setAddingError(err.message || 'Erro ao adicionar contato.');
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const startEditing = (e, item) => {
+    e.stopPropagation();
+    setEditingJid(item.jid);
+    setEditingName(isRealName(item.name) ? item.name : '');
+  };
+
+  const cancelEditing = (e) => {
+    if (e) e.stopPropagation();
+    setEditingJid(null);
+    setEditingName('');
+  };
+
+  const saveEditingName = async (e, jid) => {
+    if (e) e.stopPropagation();
+    const finalName = editingName.trim();
+    const updated = localList.map(r => r.jid === jid ? { ...r, name: finalName || formatPhoneDisplay(jid) } : r);
+    setLocalList(updated);
+    setEditingJid(null);
+    setEditingName('');
+    if (onSaveRecipients) {
+      await onSaveRecipients(updated);
     }
   };
 
@@ -147,7 +184,7 @@ export default function RecipientPicker({
               </span>
             </h2>
             <p className="text-[11px] sm:text-xs text-[#7A6859]">
-              Apenas contatos individuais salvos no WhatsApp. Canais, grupos e bots foram removidos.
+              {localList.length} contatos individuais ativos. Você pode renomear, marcar/desmarcar ou excluir contatos.
             </p>
           </div>
         </div>
@@ -227,7 +264,7 @@ export default function RecipientPicker({
                 type="tel"
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
-                placeholder="Ex: 11 98888-7777 ou 5511988887777"
+                placeholder="Ex: 81 98888-7777 ou 5581988887777"
                 required
                 className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8DFD3] text-xs text-[#382A1E] outline-none focus:border-[#C59B27]"
               />
@@ -263,7 +300,7 @@ export default function RecipientPicker({
       <div className="p-3 rounded-2xl bg-[#FDF9EF] border border-[#EBD69E] text-xs text-[#8E691A] flex items-start sm:items-center gap-2.5 mb-4">
         <Info className="w-4 h-4 flex-shrink-0 text-[#C59B27] mt-0.5 sm:mt-0" />
         <p className="leading-relaxed text-[11px] sm:text-xs">
-          <strong>Como funciona:</strong> Seus contatos individuais chegam <strong>marcados por padrão</strong>. Desmarque quem não deve receber o versículo diário ou remova no ícone de lixeira. Clique em <strong>Salvar Destinatários</strong> ao terminar.
+          <strong>Nomes dos contatos:</strong> O sistema puxa os nomes públicos de quem já trocou mensagens com você. Para qualquer contato sem nome, clique no <strong>ícone de lápis (✏️)</strong> ao lado do número para definir o nome desejado.
         </p>
       </div>
 
@@ -352,33 +389,88 @@ export default function RecipientPicker({
           filtered.map((item) => (
             <div
               key={item.jid}
-              onClick={() => toggleRecipient(item.jid)}
-              className="p-3.5 flex items-center justify-between hover:bg-white cursor-pointer transition-colors select-none group"
+              className="p-3.5 flex items-center justify-between hover:bg-white transition-colors select-none group"
             >
-              <div className="flex items-center gap-3.5 min-w-0 pr-2">
-                <div className="flex-shrink-0">
+              <div className="flex items-center gap-3.5 min-w-0 pr-2 flex-1">
+                <div
+                  className="flex-shrink-0 cursor-pointer"
+                  onClick={() => toggleRecipient(item.jid)}
+                >
                   {item.active ? (
                     <CheckSquare className="w-5 h-5 text-[#2D6A4F]" />
                   ) : (
                     <Square className="w-5 h-5 text-[#C5B8AB]" />
                   )}
                 </div>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-semibold text-[#382A1E] truncate">
-                    {item.name || formatPhoneDisplay(item.jid)}
-                  </h4>
-                  <p className="text-[10px] text-[#8E7B6C] font-mono truncate">
-                    {formatPhoneDisplay(item.jid)}
-                  </p>
-                </div>
+
+                {editingJid === item.jid ? (
+                  <div className="flex items-center gap-2 flex-1 max-w-sm">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEditingName(e, item.jid);
+                        if (e.key === 'Escape') cancelEditing(e);
+                      }}
+                      placeholder="Digite o nome do contato..."
+                      className="px-2.5 py-1 text-xs rounded-lg bg-white border border-[#C59B27] outline-none text-[#382A1E] w-full shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => saveEditingName(e, item.jid)}
+                      title="Salvar nome"
+                      className="p-1.5 rounded-lg bg-[#2D6A4F] text-white hover:bg-[#23533e] cursor-pointer flex-shrink-0"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      title="Cancelar"
+                      className="p-1.5 rounded-lg bg-[#EFE9DF] text-[#7A6859] hover:bg-[#E2D8C9] cursor-pointer flex-shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => toggleRecipient(item.jid)}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-semibold text-[#382A1E] truncate">
+                        {isRealName(item.name) ? item.name : formatPhoneDisplay(item.jid)}
+                      </h4>
+                      <button
+                        onClick={(e) => startEditing(e, item)}
+                        title="Renomear este contato"
+                        className="p-1 rounded text-[#A8988B] hover:text-[#C59B27] hover:bg-[#F6F1EA] transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#8E7B6C] font-mono truncate">
+                      {isRealName(item.name) ? (
+                        formatPhoneDisplay(item.jid)
+                      ) : (
+                        <span className="text-[#A8988B] italic">Sem nome definido no WhatsApp</span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2.5 flex-shrink-0">
-                <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all whitespace-nowrap ${
-                  item.active
-                    ? 'text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9]'
-                    : 'text-[#8E7B6C] bg-white border border-[#E8DFD3]'
-                }`}>
+                <span
+                  onClick={() => toggleRecipient(item.jid)}
+                  className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                    item.active
+                      ? 'text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9]'
+                      : 'text-[#8E7B6C] bg-white border border-[#E8DFD3]'
+                  }`}
+                >
                   {item.active ? 'Enviar' : 'Não Enviar'}
                 </span>
 
