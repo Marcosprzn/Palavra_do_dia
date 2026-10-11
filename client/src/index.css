@@ -46,3 +46,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #BFAEA0;
 }
+
+/* Hide scrollbar for horizontal mobile pill tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}

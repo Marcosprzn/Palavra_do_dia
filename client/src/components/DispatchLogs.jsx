@@ -3,24 +3,24 @@ import { History, CheckCircle, XCircle, Image as ImageIcon, FileText } from 'luc
 
 export default function DispatchLogs({ logs, liveProgress, isDispatching }) {
   return (
-    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
-      <div className="flex items-center gap-3.5 mb-5">
-        <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
-          <History className="w-6 h-6" />
+    <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex items-center gap-3 sm:gap-3.5 mb-4 sm:mb-5">
+        <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
+          <History className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
         <div>
-          <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
             Histórico & Logs de Envio
           </h2>
-          <p className="text-xs text-[#7A6859]">
-            Acompanhe o andamento dos disparos e o registro de entrega de cada mensagem
+          <p className="text-[11px] sm:text-xs text-[#7A6859]">
+            Acompanhe o andamento dos disparos e o registro de cada entrega
           </p>
         </div>
       </div>
 
       {/* Live Sending Progress Banner */}
       {isDispatching && liveProgress && (
-        <div className="p-4 rounded-2xl bg-[#EBF7EE] border border-[#C2E4C9] mb-5 shadow-xs">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EBF7EE] border border-[#C2E4C9] mb-4 sm:mb-5 shadow-xs">
           <div className="flex items-center justify-between text-xs font-semibold text-[#2D6A4F] mb-2">
             <span>Enviando para: <strong>{liveProgress.currentRecipient || '...'}</strong></span>
             <span>{liveProgress.current} de {liveProgress.total} ({liveProgress.percentage}%)</span>
@@ -40,8 +40,8 @@ export default function DispatchLogs({ logs, liveProgress, isDispatching }) {
 
       {/* Logs Table */}
       <div className="rounded-2xl border border-[#E8DFD3] bg-[#FAF8F5] overflow-hidden">
-        <div className="max-h-64 overflow-y-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="max-h-64 overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs min-w-[500px]">
             <thead>
               <tr className="border-b border-[#E8DFD3] bg-[#FAF8F5] text-[#7A6859] font-semibold">
                 <th className="py-3 px-4">Destinatário</th>

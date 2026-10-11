@@ -44,32 +44,32 @@ export default function VerseViewer({
   const currentVerse = verseData?.verse;
 
   return (
-    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
-            <BookOpen className="w-6 h-6" />
+    <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2 flex-wrap">
               Versículo do Dia
               {currentVerse?.theme && (
-                <span className="text-[11px] font-sans font-semibold px-2.5 py-0.5 rounded-full bg-[#F5EDE0] text-[#8E691A] border border-[#E8D9BD]">
+                <span className="text-[10px] sm:text-[11px] font-sans font-semibold px-2 sm:px-2.5 py-0.5 rounded-full bg-[#F5EDE0] text-[#8E691A] border border-[#E8D9BD]">
                   {currentVerse.theme}
                 </span>
               )}
             </h2>
-            <p className="text-xs text-[#7A6859]">
+            <p className="text-[11px] sm:text-xs text-[#7A6859]">
               Palavra sagrada selecionada para os envios de hoje
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={onRoll}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer disabled:opacity-50 shadow-xs"
             title="Sortear outro versículo aleatório"
           >
             <Dices className={`w-4 h-4 text-[#C59B27] ${loading ? 'animate-spin' : ''}`} />
@@ -83,7 +83,7 @@ export default function VerseViewer({
                 fetch('/api/verse/search?q=').then(r => r.json()).then(setSearchResults);
               }
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#F5EDE0] hover:bg-[#EFE3CF] text-[#8E691A] border border-[#E8D9BD] transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#F5EDE0] hover:bg-[#EFE3CF] text-[#8E691A] border border-[#E8D9BD] transition-all cursor-pointer shadow-xs"
           >
             <Search className="w-4 h-4" />
             Buscar
@@ -92,15 +92,15 @@ export default function VerseViewer({
       </div>
 
       {/* Main Verse Card Display - Parchment / Warm Devotional Card */}
-      <div className="scripture-card rounded-2xl p-6 sm:p-7 mb-6 relative border border-[#E4D8C5]">
-        <div className="text-[#9A7718] font-bold text-sm tracking-wide mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <span className="text-base">📖</span>
+      <div className="scripture-card rounded-2xl p-4 sm:p-6 sm:p-7 mb-5 sm:mb-6 relative border border-[#E4D8C5]">
+        <div className="text-[#9A7718] font-bold text-xs sm:text-sm tracking-wide mb-2.5 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 sm:gap-2">
+            <BookOpen className="w-4 h-4 text-[#8E691A]" />
             <span className="font-sans uppercase text-xs tracking-wider font-semibold">
               {currentVerse?.reference || 'Carregando versículo...'}
             </span>
           </span>
-          <span className="text-[10px] text-[#A8988B] font-sans">Almeida Revista e Corrigida</span>
+          <span className="text-[10px] text-[#A8988B] font-sans hidden xs:inline">Almeida Revista e Corrigida</span>
         </div>
         <p className="text-base sm:text-lg text-[#382A1E] leading-relaxed font-serif italic selection:bg-[#F5EDE0]">
           "{currentVerse?.text || 'Buscando a palavra de Deus...'}"

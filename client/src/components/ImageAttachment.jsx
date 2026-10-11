@@ -57,14 +57,14 @@ export default function ImageAttachment({
   };
 
   return (
-    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
-            <ImageIcon className="w-6 h-6" />
+    <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex items-center justify-between mb-4 sm:mb-5">
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
+            <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2 flex-wrap">
               Anexo de Imagem
               {imagePath && (
                 <span className="flex items-center gap-1 text-[11px] font-sans font-medium px-2.5 py-0.5 rounded-full bg-[#EBF7EE] text-[#2D6A4F] border border-[#C2E4C9]">

@@ -26,23 +26,23 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Banner */}
-      <div className="church-card rounded-3xl p-6 sm:p-8 relative overflow-hidden bg-white">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-2xl flex items-center justify-center transition-all ${
+      <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 relative overflow-hidden bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-5">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all flex-shrink-0 ${
               isConnected
                 ? 'bg-[#EBF7EE] text-[#2D6A4F] border border-[#C2E4C9]'
                 : isQrReady
                 ? 'bg-[#FFF8EA] text-[#A27318] border border-[#F0DCB3]'
                 : 'bg-[#F6F1EA] text-[#7A6859] border border-[#E8DFD3]'
             }`}>
-              <Smartphone className="w-7 h-7" />
+              <Smartphone className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
             <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="text-xl font-display font-bold text-[#382A1E]">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-[#382A1E]">
                   Aparelho WhatsApp
                 </h2>
                 {isConnected ? (
@@ -168,12 +168,12 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
 
       {/* VIEW WHEN QR CODE IS READY (NOT CONNECTED) */}
       {!isConnected && (
-        <div className="church-card rounded-3xl p-6 sm:p-10 bg-white border border-[#E8DFD3]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-10 bg-white border border-[#E8DFD3]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             {/* Step-by-step Instructions */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
               <div>
-                <h3 className="text-lg sm:text-xl font-display font-bold text-[#382A1E] mb-2">
+                <h3 className="text-base sm:text-xl font-display font-bold text-[#382A1E] mb-1.5 sm:mb-2">
                   Como conectar o seu WhatsApp:
                 </h3>
                 <p className="text-xs text-[#7A6859] leading-relaxed">
@@ -181,9 +181,9 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
-                  <div className="w-7 h-7 rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="flex items-start gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
                     1
                   </div>
                   <div>
@@ -192,8 +192,8 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
-                  <div className="w-7 h-7 rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <div className="flex items-start gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
                     2
                   </div>
                   <div>
@@ -202,8 +202,8 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
-                  <div className="w-7 h-7 rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <div className="flex items-start gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#FAF8F5] border border-[#E8DFD3]">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-[#F4EFE6] text-[#8E691A] border border-[#E8DFD3] flex items-center justify-center text-xs font-bold flex-shrink-0">
                     3
                   </div>
                   <div>
@@ -213,21 +213,21 @@ export default function WhatsAppCard({ status, onConnect, onLogout, loading, con
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[#FFF8EA] border border-[#F0DCB3] flex items-center gap-3 text-xs text-[#8E691A]">
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#FFF8EA] border border-[#F0DCB3] flex items-center gap-2.5 sm:gap-3 text-xs text-[#8E691A]">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 text-[#C59B27]" />
-                <span>O QR Code atualiza automaticamente em caso de expiração da chave.</span>
+                <span className="text-[11px] sm:text-xs">O QR Code atualiza automaticamente em caso de expiração da chave.</span>
               </div>
             </div>
 
             {/* QR Code Container */}
-            <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 rounded-3xl bg-[#FAF8F5] border border-[#E8DFD3] shadow-xs relative">
+            <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#FAF8F5] border border-[#E8DFD3] shadow-xs relative">
               {isQrReady && status.qrCode ? (
-                <div className="text-center space-y-4">
-                  <div className="p-4 bg-white rounded-3xl shadow-md inline-block border-2 border-[#E8DFD3]">
+                <div className="text-center space-y-3 sm:space-y-4">
+                  <div className="p-3 sm:p-4 bg-white rounded-2xl sm:rounded-3xl shadow-md inline-block border-2 border-[#E8DFD3]">
                     <img
                       src={status.qrCode}
                       alt="QR Code WhatsApp"
-                      className="w-60 h-60 sm:w-68 sm:h-68 object-contain rounded-xl"
+                      className="w-48 h-48 sm:w-64 sm:h-64 object-contain rounded-xl"
                     />
                   </div>
                   <div className="flex items-center justify-center gap-2 text-xs text-[#2D6A4F] font-medium">

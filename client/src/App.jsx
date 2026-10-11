@@ -17,6 +17,7 @@ import LiveWhatsAppPreview from './components/LiveWhatsAppPreview';
 import ScheduleCard from './components/ScheduleCard';
 import RecipientPicker from './components/RecipientPicker';
 import DispatchLogs from './components/DispatchLogs';
+import ChurchCross from './components/icons/ChurchCross';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('message'); // 'whatsapp' | 'message' | 'recipients' | 'logs'
@@ -275,29 +276,29 @@ export default function App() {
     <div className="min-h-screen pb-24 bg-[#FAF8F5] text-[#382A1E]">
       {/* Top Header Bar: Clean, Warm, Serene */}
       <header className="border-b border-[#E8DFD3] bg-[#FAF8F5]/90 backdrop-blur-md sticky top-0 z-40 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-[#F4EFE6] border border-[#E8DFD3] flex items-center justify-center text-[#C59B27] shadow-xs">
-              <span className="text-xl leading-none">✝</span>
+        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#F4EFE6] border border-[#E8DFD3] flex items-center justify-center text-[#C59B27] shadow-xs flex-shrink-0">
+              <ChurchCross className="w-5 h-5 text-[#C59B27]" />
             </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-display font-bold text-[#382A1E] tracking-tight flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-display font-bold text-[#382A1E] tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
                 Palavra do Dia
-                <span className="text-[10px] font-sans font-semibold px-2.5 py-0.5 rounded-full bg-[#F5EDE0] text-[#8E691A] border border-[#E8D9BD]">
-                  Devocional WhatsApp
+                <span className="text-[9px] sm:text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-[#F5EDE0] text-[#8E691A] border border-[#E8D9BD] hidden xs:inline-block">
+                  Devocional
                 </span>
               </h1>
-              <p className="text-xs text-[#7A6859] hidden sm:block">
+              <p className="text-[11px] sm:text-xs text-[#7A6859] hidden sm:block">
                 Envio sereno e diário das escrituras sagradas para seus contatos
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {/* Quick Status Clickable Badge */}
             <button
               onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium transition-all cursor-pointer shadow-xs ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full border text-[11px] sm:text-xs font-medium transition-all cursor-pointer shadow-xs ${
                 isConnected
                   ? 'bg-[#EBF7EE] border-[#C2E4C9] text-[#2D6A4F] hover:bg-[#E2F3E6]'
                   : 'bg-[#FFF8EA] border-[#F0DCB3] text-[#A27318] hover:bg-[#FDF3DE]'
@@ -305,37 +306,38 @@ export default function App() {
               title="Clique para abrir a aba do WhatsApp"
             >
               <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#2D6A4F]' : 'bg-[#D4A33B] animate-pulse'}`}></span>
-              <span>{isConnected ? 'WhatsApp Conectado' : 'Conectar Aparelho'}</span>
+              <span className="hidden xs:inline">{isConnected ? 'WhatsApp Conectado' : 'Conectar Aparelho'}</span>
+              <span className="xs:hidden">{isConnected ? 'Conectado' : 'Conectar'}</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5EFE6] border border-[#E8DFD3] text-xs text-[#7A6859]">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5EFE6] border border-[#E8DFD3] text-xs text-[#7A6859]">
               <ShieldCheck className="w-3.5 h-3.5 text-[#C59B27]" />
-              <span>Anti-Bloqueio Ativo</span>
+              <span>Anti-Bloqueio</span>
             </div>
           </div>
         </div>
 
         {/* Apple-Style Segmented Navigation Tabs */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-1 pb-3">
-          <div className="inline-flex p-1 rounded-2xl bg-[#EFE9DF] border border-[#E2D8C9] gap-1 overflow-x-auto max-w-full">
+        <div className="max-w-6xl mx-auto px-3.5 sm:px-6 pt-0.5 pb-2.5">
+          <div className="flex p-1 rounded-2xl bg-[#EFE9DF] border border-[#E2D8C9] gap-1 overflow-x-auto no-scrollbar w-full">
             {/* Tab 1: WhatsApp */}
             <button
               onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'whatsapp'
                   ? 'bg-white text-[#382A1E] shadow-sm'
                   : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span>Conexão WhatsApp</span>
+              <span>WhatsApp</span>
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#2D6A4F]' : 'bg-[#C59B27]'}`}></span>
             </button>
 
             {/* Tab 2: Message & Send */}
             <button
               onClick={() => setActiveTab('message')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'message'
                   ? 'bg-white text-[#382A1E] shadow-sm'
                   : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
@@ -348,7 +350,7 @@ export default function App() {
             {/* Tab 3: Recipients */}
             <button
               onClick={() => setActiveTab('recipients')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'recipients'
                   ? 'bg-white text-[#382A1E] shadow-sm'
                   : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
@@ -364,14 +366,14 @@ export default function App() {
             {/* Tab 4: Logs */}
             <button
               onClick={() => setActiveTab('logs')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'logs'
                   ? 'bg-white text-[#382A1E] shadow-sm'
                   : 'text-[#7A6859] hover:text-[#382A1E] hover:bg-white/50'
               }`}
             >
               <History className="w-3.5 h-3.5" />
-              <span>Histórico de Envios</span>
+              <span>Histórico</span>
               {isDispatching && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#C59B27] animate-ping"></span>
               )}

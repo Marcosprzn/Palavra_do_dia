@@ -1,5 +1,6 @@
 import React from 'react';
-import { Eye, CheckCheck, MoreVertical, Phone, Video, ArrowLeft } from 'lucide-react';
+import { Eye, CheckCheck, MoreVertical, Phone, Video, ArrowLeft, BookOpen } from 'lucide-react';
+import ChurchCross from './icons/ChurchCross';
 
 export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
   const currentVerse = verseData?.verse;
@@ -11,29 +12,29 @@ export default function LiveWhatsAppPreview({ verseData, caption, imagePath }) {
     : null;
 
   return (
-    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3] flex flex-col">
-      <div className="flex items-center gap-3.5 mb-5">
-        <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
-          <Eye className="w-6 h-6" />
+    <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 bg-white border border-[#E8DFD3] flex flex-col">
+      <div className="flex items-center gap-3 sm:gap-3.5 mb-4 sm:mb-5">
+        <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
+          <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
         <div>
-          <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
             Pré-visualização
           </h2>
-          <p className="text-xs text-[#7A6859]">
-            Exibição exata no WhatsApp dos destinatários
+          <p className="text-[11px] sm:text-xs text-[#7A6859]">
+            Exibição no WhatsApp dos destinatários
           </p>
         </div>
       </div>
 
       {/* Simulated Phone WhatsApp Container - Authentic WhatsApp Chat in Light Theme */}
-      <div className="rounded-3xl overflow-hidden border border-[#E8DFD3] shadow-sm bg-[#EFEAE2] flex flex-col flex-1 max-w-sm mx-auto w-full">
+      <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-[#E8DFD3] shadow-sm bg-[#EFEAE2] flex flex-col flex-1 max-w-sm mx-auto w-full">
         {/* WhatsApp Chat Header */}
-        <div className="bg-[#008069] px-3.5 py-3 flex items-center justify-between text-white shadow-xs">
-          <div className="flex items-center gap-2.5">
+        <div className="bg-[#008069] px-3 sm:px-3.5 py-2.5 sm:py-3 flex items-center justify-between text-white shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <ArrowLeft className="w-4 h-4 text-white/90" />
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold border border-white/30">
-              ✝️
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center text-white border border-white/30">
+              <ChurchCross className="w-4 h-4 text-white" />
             </div>
             <div>
               <h4 className="text-xs font-bold text-white leading-tight">Palavra do Dia</h4>

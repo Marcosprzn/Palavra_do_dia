@@ -46,21 +46,21 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
   });
 
   return (
-    <div className="church-card rounded-3xl p-6 sm:p-8 bg-white border border-[#E8DFD3]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3.5 rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
-            <Users className="w-6 h-6" />
+    <div className="church-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 sm:p-8 bg-white border border-[#E8DFD3]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F6F1EA] text-[#8E691A] border border-[#E8DFD3]">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-display font-bold text-[#382A1E] flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2 flex-wrap">
               Destinatários do WhatsApp
-              <span className="text-xs font-sans font-medium px-2.5 py-0.5 rounded-full bg-[#EBF7EE] text-[#2D6A4F] border border-[#C2E4C9]">
+              <span className="text-[10px] sm:text-xs font-sans font-medium px-2 sm:px-2.5 py-0.5 rounded-full bg-[#EBF7EE] text-[#2D6A4F] border border-[#C2E4C9]">
                 {activeCount} de {localList.length} marcados
               </span>
             </h2>
-            <p className="text-xs text-[#7A6859]">
-              Espelho fiel dos seus contatos. Pesquise, desmarque quem não deve receber e salve sua seleção.
+            <p className="text-[11px] sm:text-xs text-[#7A6859]">
+              Espelho fiel dos contatos. Desmarque quem não deve receber e salve.
             </p>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
         <button
           onClick={handleSave}
           disabled={loading}
-          className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 ${
+          className={`flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 w-full sm:w-auto ${
             savedFeedback
               ? 'bg-[#2D6A4F] text-white'
               : 'bg-[#382A1E] hover:bg-[#251B12] text-white'
