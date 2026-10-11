@@ -136,13 +136,34 @@ async function useDatabaseAuthState(sessionId = 'default') {
   };
 }
 
-async function initWhatsApp(io) {
+async function initWhatsApp(io, forceNew = false) {
   if (io) {
     ioInstance = io;
   }
 
   try {
     broadcastStatus('connecting');
+
+    // Se já houver um socket rodando, encerra antes de recriar
+    if (sock) {
+      try {
+        sock.ev.removeAllListeners();
+        sock.end();
+      } catch (e) {
+        console.warn('Aviso ao finalizar socket anterior:', e.message);
+      }
+      sock = null;
+    }
+
+    // Se solicitado forceNew (gerar novo QR Code), limpa credenciais antigas do banco
+    if (forceNew) {
+      console.log('🔄 Limpando sessão anterior do Supabase para gerar novo QR Code...');
+      try {
+        await db.clearSession('default');
+      } catch (e) {
+        console.warn('Erro ao limpar sessão antiga:', e.message);
+      }
+    }
 
     // Load auth state from Database (Supabase PostgreSQL / SQLite)
     const { state, saveCreds, clearSession } = await useDatabaseAuthState('default');
@@ -195,20 +216,21 @@ async function initWhatsApp(io) {
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-        console.log(`Conexão Baileys encerrada (código: ${statusCode}). Reconectar: ${shouldReconnect}`);
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+        console.log(`Conexão Baileys encerrada (código: ${statusCode}). Deslogado: ${isLoggedOut}`);
 
         broadcastStatus('disconnected', { qrCode: null, user: null });
 
-        if (shouldReconnect) {
-          setTimeout(() => initWhatsApp(ioInstance), 3000);
-        } else {
-          // Desconectado explicitamente pelo usuário no celular - limpar sessão do Supabase/banco
+        if (isLoggedOut) {
+          // Desconectado explicitamente pelo celular ou sessão revogada - limpa do banco
           try {
             await clearSession();
           } catch (e) {
             console.error('Erro ao limpar sessão do banco:', e);
           }
+        } else {
+          // Queda temporária de rede - tenta reconectar
+          setTimeout(() => initWhatsApp(ioInstance, false), 3000);
         }
       } else if (connection === 'open') {
         console.log('✅ Conexão Baileys WhatsApp estabelecida com sucesso!');

@@ -50,8 +50,10 @@ router.get('/status', (req, res) => {
 // 2. WhatsApp connection controls
 router.post('/whatsapp/connect', async (req, res) => {
   try {
-    await whatsappService.initWhatsApp();
-    res.json({ success: true, message: 'Iniciando conexão com WhatsApp' });
+    const isConnected = whatsappService.getConnectionStatus().state === 'connected';
+    // Se não estiver conectado, força a limpeza de credenciais anteriores para gerar um QR code novo
+    await whatsappService.initWhatsApp(null, !isConnected);
+    res.json({ success: true, message: 'Iniciando conexão e geração de QR Code...' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
