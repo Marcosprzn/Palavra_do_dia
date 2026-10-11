@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { Sparkles, MessageCircleHeart, ShieldCheck } from 'lucide-react';
+import {
+  Sparkles,
+  MessageCircleHeart,
+  ShieldCheck,
+  Smartphone,
+  BookOpen,
+  Users,
+  History,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 
 import WhatsAppCard from './components/WhatsAppCard';
 import VerseViewer from './components/VerseViewer';
@@ -11,6 +21,7 @@ import RecipientPicker from './components/RecipientPicker';
 import DispatchLogs from './components/DispatchLogs';
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('message'); // 'whatsapp' | 'message' | 'recipients' | 'logs'
   const [waStatus, setWaStatus] = useState({ state: 'connecting', qrCode: null, user: null });
   const [verseData, setVerseData] = useState(null);
   const [scheduleTime, setScheduleTime] = useState('06:00');
@@ -28,6 +39,10 @@ export default function App() {
 
     socket.on('connection_status', (status) => {
       setWaStatus(status);
+      // If user connects while on whatsapp tab, they stay; if disconnected on load, show whatsapp tab
+      if (status.state === 'qr_ready') {
+        setActiveTab('whatsapp');
+      }
     });
 
     socket.on('scheduler_status', (data) => {
@@ -67,8 +82,15 @@ export default function App() {
       // 1. Status
       const statusRes = await fetch('/api/status');
       const statusData = await statusRes.json();
-      if (statusData.whatsapp) setWaStatus(statusData.whatsapp);
-      if (statusData.scheduler?.schedule_time) setScheduleTime(statusData.scheduler.schedule_time);
+      if (statusData.whatsapp) {
+        setWaStatus(statusData.whatsapp);
+        if (statusData.whatsapp.state !== 'connected') {
+          setActiveTab('whatsapp');
+        }
+      }
+      if (statusData.scheduler?.schedule_time) {
+        setScheduleTime(statusData.scheduler.schedule_time);
+      }
 
       // 2. Verse
       const verseRes = await fetch('/api/verse');
@@ -121,6 +143,7 @@ export default function App() {
     setLoadingAction(true);
     try {
       await fetch('/api/whatsapp/logout', { method: 'POST' });
+      setActiveTab('whatsapp');
     } catch (err) {
       console.error('Erro ao desconectar WhatsApp:', err);
     } finally {
@@ -202,6 +225,7 @@ export default function App() {
   const handleTriggerDispatch = async () => {
     try {
       setIsDispatching(true);
+      setActiveTab('logs');
       await fetch('/api/dispatch', { method: 'POST' });
     } catch (err) {
       console.error('Erro ao iniciar disparo manual:', err);
@@ -223,10 +247,11 @@ export default function App() {
     }
   };
 
+  const isConnected = waStatus?.state === 'connected';
   const activeRecipientsCount = recipients.filter(r => r.active).length;
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-20">
       {/* Top Header Bar */}
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
@@ -247,82 +272,169 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+          <div className="flex items-center gap-2.5">
+            {/* Quick Status Clickable Badge */}
+            <button
+              onClick={() => setActiveTab('whatsapp')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                isConnected
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+              }`}
+              title="Clique para abrir a aba do WhatsApp"
+            >
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+              <span>{isConnected ? 'WhatsApp Conectado' : 'Conectar WhatsApp'}</span>
+            </button>
+
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">Proteção Anti-Ban:</span>
-              <span className="text-emerald-400 font-bold">Ativa</span>
+              <span>Anti-Ban: <strong className="text-emerald-400">Ativo</strong></span>
             </div>
           </div>
         </div>
+
+        {/* Navigation Tabs Bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2">
+          <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none pb-2">
+            {/* Tab 1: WhatsApp */}
+            <button
+              onClick={() => setActiveTab('whatsapp')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'whatsapp'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>Conexão WhatsApp</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-300' : 'bg-amber-400'}`}></span>
+            </button>
+
+            {/* Tab 2: Message & Send */}
+            <button
+              onClick={() => setActiveTab('message')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'message'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Mensagem & Envio</span>
+            </button>
+
+            {/* Tab 3: Recipients */}
+            <button
+              onClick={() => setActiveTab('recipients')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'recipients'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Destinatários</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900 text-slate-300 border border-slate-700">
+                {activeRecipientsCount}
+              </span>
+            </button>
+
+            {/* Tab 4: Logs */}
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>Histórico & Logs</span>
+              {isDispatching && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              )}
+            </button>
+          </nav>
+        </div>
       </header>
 
-      {/* Main Grid Content */}
+      {/* Main Container Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Left Column: Controls and Settings (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* WhatsApp Connection Card */}
+        {/* TAB 1: CONEXÃO WHATSAPP */}
+        {activeTab === 'whatsapp' && (
+          <div className="max-w-4xl mx-auto">
             <WhatsAppCard
               status={waStatus}
               onConnect={handleConnectWhatsApp}
               onLogout={handleLogoutWhatsApp}
               loading={loadingAction}
+              contactsCount={recipients.length}
             />
+          </div>
+        )}
 
-            {/* Verse Selection & Custom Greeting */}
-            <VerseViewer
-              verseData={verseData}
-              caption={verseData?.custom_caption}
-              onRoll={handleRollVerse}
-              onSelectVerse={handleSelectVerse}
-              onUpdateCaption={handleUpdateCaption}
-              loading={loadingAction}
-            />
+        {/* TAB 2: MENSAGEM & ENVIO */}
+        {activeTab === 'message' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Verse Viewer, Image Attachment, Schedule Card */}
+            <div className="lg:col-span-7 space-y-6">
+              <VerseViewer
+                verseData={verseData}
+                caption={verseData?.custom_caption}
+                onRoll={handleRollVerse}
+                onSelectVerse={handleSelectVerse}
+                onUpdateCaption={handleUpdateCaption}
+                loading={loadingAction}
+              />
 
-            {/* Manual Image Attachment */}
-            <ImageAttachment
-              imagePath={verseData?.image_path}
-              onUploadSuccess={handleUploadSuccess}
-              onRemoveImage={handleRemoveImage}
-            />
+              <ImageAttachment
+                imagePath={verseData?.image_path}
+                onUploadSuccess={handleUploadSuccess}
+                onRemoveImage={handleRemoveImage}
+              />
 
-            {/* Schedule & Immediate Dispatch */}
-            <ScheduleCard
-              scheduleTime={scheduleTime}
-              isDispatching={isDispatching}
-              activeRecipientsCount={activeRecipientsCount}
-              onUpdateSchedule={handleUpdateSchedule}
-              onTriggerDispatch={handleTriggerDispatch}
-            />
+              <ScheduleCard
+                scheduleTime={scheduleTime}
+                isDispatching={isDispatching}
+                activeRecipientsCount={activeRecipientsCount}
+                onUpdateSchedule={handleUpdateSchedule}
+                onTriggerDispatch={handleTriggerDispatch}
+              />
+            </div>
 
-            {/* Recipients Picker */}
+            {/* Right Column: Live WhatsApp Preview */}
+            <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-36">
+              <LiveWhatsAppPreview
+                verseData={verseData}
+                caption={verseData?.custom_caption}
+                imagePath={verseData?.image_path}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: DESTINATÁRIOS */}
+        {activeTab === 'recipients' && (
+          <div className="max-w-4xl mx-auto space-y-6">
             <RecipientPicker
               recipients={recipients}
               onSaveRecipients={handleSaveRecipients}
               loading={loadingAction}
             />
           </div>
+        )}
 
-          {/* Right Column: Live WhatsApp Preview & Dispatch History (5 cols) */}
-          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-20">
-            {/* Live WhatsApp Preview */}
-            <LiveWhatsAppPreview
-              verseData={verseData}
-              caption={verseData?.custom_caption}
-              imagePath={verseData?.image_path}
-            />
-
-            {/* Live Dispatch Logs */}
+        {/* TAB 4: HISTÓRICO & LOGS */}
+        {activeTab === 'logs' && (
+          <div className="max-w-4xl mx-auto space-y-6">
             <DispatchLogs
               logs={logs}
               liveProgress={liveProgress}
               isDispatching={isDispatching}
             />
           </div>
-
-        </div>
+        )}
       </main>
     </div>
   );
