@@ -49,11 +49,25 @@ async function runTest() {
   fs.unlinkSync(tempImg);
   console.log('✓ formatMessagePayload handles text and image+caption correctly');
 
-  // 5. Test group sending prevention
+  // 5. Test group and invalid recipient sending prevention
   const groupSkipResult = await whatsappService.sendMessage('120363024567890123@g.us', 'Tentativa grupo');
   assert.strictEqual(groupSkipResult.status, 'skipped');
   assert.strictEqual(groupSkipResult.reason, 'group_blocked');
   console.log('✓ sendMessage strictly blocks sending to WhatsApp groups');
+
+  const lidSkipResult = await whatsappService.sendMessage('264789547164@lid', 'Tentativa LID');
+  assert.strictEqual(lidSkipResult.status, 'skipped');
+  assert.strictEqual(lidSkipResult.reason, 'invalid_recipient_blocked');
+  console.log('✓ sendMessage strictly blocks sending to LID / anonymous identities');
+
+  // 6. Test isRealIndividualUser
+  assert.strictEqual(whatsappService.isRealIndividualUser('5511999998888@s.whatsapp.net'), true);
+  assert.strictEqual(whatsappService.isRealIndividualUser('264789547164@lid'), false);
+  assert.strictEqual(whatsappService.isRealIndividualUser('120363024567890123@newsletter'), false);
+  assert.strictEqual(whatsappService.isRealIndividualUser('120363024567890123@g.us'), false);
+  assert.strictEqual(whatsappService.isRealIndividualUser('status@broadcast'), false);
+  assert.strictEqual(whatsappService.isRealIndividualUser('5511999998888@s.whatsapp.net', '5511999998888:0@s.whatsapp.net'), false, 'Self user should be rejected');
+  console.log('✓ isRealIndividualUser correctly validates only genuine individual contacts');
 
   console.log('ALL WHATSAPP SERVICE TESTS PASSED!');
 }

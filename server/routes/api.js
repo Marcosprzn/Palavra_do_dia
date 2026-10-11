@@ -243,7 +243,7 @@ router.get('/recipients', async (req, res) => {
 
     const dbRecipients = await db.getRecipients();
     const list = dbRecipients
-      .filter(r => r.type !== 'group' && !r.jid.includes('@g.us'))
+      .filter(r => r.type !== 'group' && r.jid && r.jid.endsWith('@s.whatsapp.net') && !r.jid.includes('@lid') && !r.jid.includes('@newsletter') && !r.jid.includes('@g.us'))
       .map(r => ({
         jid: r.jid,
         name: r.name,
@@ -265,6 +265,51 @@ router.post('/recipients', async (req, res) => {
     }
     await db.saveRecipients(recipients);
     res.json({ success: true, count: recipients.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/recipients/add', async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Número de telefone é obrigatório.' });
+    }
+    const cleanDigits = phone.replace(/\D/g, '');
+    if (cleanDigits.length < 8) {
+      return res.status(400).json({ error: 'Número de telefone inválido (muito curto).' });
+    }
+    let fullDigits = cleanDigits;
+    // Se digitou número local brasileiro sem código de país (10 ou 11 dígitos), prefixar 55
+    if ((cleanDigits.length === 10 || cleanDigits.length === 11) && !cleanDigits.startsWith('55')) {
+      fullDigits = '55' + cleanDigits;
+    }
+    const jid = `${fullDigits}@s.whatsapp.net`;
+    const contactName = (name && name.trim()) || `+${fullDigits}`;
+    await db.saveRecipients([{ jid, name: contactName, type: 'individual', active: 1 }]);
+    res.json({
+      success: true,
+      recipient: {
+        jid,
+        name: contactName,
+        type: 'individual',
+        active: true
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/recipients/:jid', async (req, res) => {
+  try {
+    const { jid } = req.params;
+    if (!jid) {
+      return res.status(400).json({ error: 'JID não informado.' });
+    }
+    await db.deleteRecipient(jid);
+    res.json({ success: true, message: 'Destinatário excluído com sucesso.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

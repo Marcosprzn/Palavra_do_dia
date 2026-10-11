@@ -322,6 +322,42 @@ export default function App() {
     }
   };
 
+  const handleDeleteRecipient = async (jid) => {
+    try {
+      const res = await fetch(`/api/recipients/${encodeURIComponent(jid)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setRecipients(prev => prev.filter(r => r.jid !== jid));
+      }
+    } catch (err) {
+      console.error('Erro ao excluir destinatário:', err);
+    }
+  };
+
+  const handleAddRecipient = async ({ name, phone }) => {
+    try {
+      const res = await fetch('/api/recipients/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+      });
+      const data = await res.json();
+      if (data.success && data.recipient) {
+        setRecipients(prev => {
+          const filtered = prev.filter(r => r.jid !== data.recipient.jid);
+          return [data.recipient, ...filtered];
+        });
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Erro ao adicionar contato.' };
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar contato:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   const isConnected = waStatus?.state === 'connected';
   const activeRecipientsCount = recipients.filter(r => r.active).length;
 
@@ -498,6 +534,8 @@ export default function App() {
             <RecipientPicker
               recipients={recipients}
               onSaveRecipients={handleSaveRecipients}
+              onDeleteRecipient={handleDeleteRecipient}
+              onAddRecipient={handleAddRecipient}
               onRefresh={fetchRecipients}
               loading={loadingAction}
             />

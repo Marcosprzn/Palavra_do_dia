@@ -33,14 +33,22 @@ async function runTest() {
   // Test Recipients
   const testRecipients = [
     { jid: '5511999999999@s.whatsapp.net', name: 'João Silva', type: 'individual', active: 1 },
-    { jid: '120363024567890123@g.us', name: 'Grupo Família', type: 'group', active: 1 }
+    { jid: '5511888888888@s.whatsapp.net', name: 'Ana Costa', type: 'individual', active: 1 },
+    { jid: '120363024567890123@g.us', name: 'Grupo Família', type: 'group', active: 1 },
+    { jid: '123456789@lid', name: 'Admin Grupo', type: 'individual', active: 1 }
   ];
   await db.saveRecipients(testRecipients);
   const recipients = await db.getRecipients();
-  assert.strictEqual(recipients.length, 2, 'Should have 2 recipients');
-  assert.strictEqual(recipients[0].name, 'Grupo Família');
+  assert.strictEqual(recipients.length, 2, 'Should only save and fetch 2 valid individual recipients');
+  assert.strictEqual(recipients[0].name, 'Ana Costa');
   assert.strictEqual(recipients[1].name, 'João Silva');
-  console.log('✓ Recipients save and fetch verified');
+  
+  // Test deleteRecipient
+  await db.deleteRecipient('5511888888888@s.whatsapp.net');
+  const remainingRecipients = await db.getRecipients();
+  assert.strictEqual(remainingRecipients.length, 1);
+  assert.strictEqual(remainingRecipients[0].name, 'João Silva');
+  console.log('✓ Recipients save, fetch, filter and delete verified');
 
   // Test Send Logs
   await db.logSend({

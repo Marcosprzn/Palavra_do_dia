@@ -93,10 +93,31 @@ function broadcastStatus(state, data = {}) {
   }
 }
 
+function isRealIndividualUser(jid, selfJid = null) {
+  if (!jid || typeof jid !== 'string') return false;
+  const clean = jid.trim();
+  if (!clean.endsWith('@s.whatsapp.net')) return false;
+  if (
+    clean.includes('@lid') ||
+    clean.includes('@newsletter') ||
+    clean.includes('@g.us') ||
+    clean.includes('broadcast')
+  ) {
+    return false;
+  }
+  const digits = clean.replace(/@.*$/, '').replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 16) return false;
+  if (selfJid) {
+    const cleanSelf = selfJid.split(':')[0].replace(/@.*$/, '').replace(/\D/g, '');
+    if (cleanSelf && digits === cleanSelf) return false;
+  }
+  return true;
+}
+
 function formatJid(input) {
   if (!input) return '';
   const clean = input.trim();
-  if (clean.includes('@s.whatsapp.net') || clean.includes('@g.us')) {
+  if (clean.includes('@s.whatsapp.net') || clean.includes('@g.us') || clean.includes('@lid') || clean.includes('@newsletter')) {
     return clean;
   }
   const digits = clean.replace(/\D/g, '');
@@ -346,13 +367,16 @@ async function initWhatsApp(io, forceNew = false) {
     // Sincronizar contatos (upsert, set, updates e histórico da agenda)
     const handleAddContacts = async (contacts) => {
       if (!Array.isArray(contacts)) return;
+      const selfJid = currentSocket.user?.id;
       const batch = [];
       for (const c of contacts) {
         let jid = c.id;
         if (c.jid && c.jid.includes('@s.whatsapp.net')) {
           jid = c.jid;
+        } else if (c.phoneNumber) {
+          jid = `${c.phoneNumber.replace(/\D/g, '')}@s.whatsapp.net`;
         }
-        if (!jid || jid.includes('@g.us') || jid.includes('status@broadcast')) {
+        if (!isRealIndividualUser(jid, selfJid)) {
           continue;
         }
 
@@ -380,13 +404,16 @@ async function initWhatsApp(io, forceNew = false) {
     currentSocket.ev.on('contacts.set', ({ contacts }) => handleAddContacts(contacts));
 
     currentSocket.ev.on('contacts.update', async (updates) => {
+      const selfJid = currentSocket.user?.id;
       const batch = [];
       for (const u of updates) {
         let jid = u.id;
         if (u.jid && u.jid.includes('@s.whatsapp.net')) {
           jid = u.jid;
+        } else if (u.phoneNumber) {
+          jid = `${u.phoneNumber.replace(/\D/g, '')}@s.whatsapp.net`;
         }
-        if (!jid || jid.includes('@g.us') || jid.includes('status@broadcast')) continue;
+        if (!isRealIndividualUser(jid, selfJid)) continue;
         const existing = contactsMap.get(jid);
         const rawName = u.name || u.notify || u.verifiedName || existing?.name;
         const name = formatDisplayName(rawName, jid);
@@ -411,6 +438,7 @@ async function initWhatsApp(io, forceNew = false) {
     // Sincronizar conversas (normais, fixadas e arquivadas)
     const handleChats = async (chats) => {
       if (!Array.isArray(chats)) return;
+      const selfJid = currentSocket.user?.id;
       const batch = [];
       for (const chat of chats) {
         if (!chat.id || chat.id.includes('status@broadcast')) continue;
@@ -420,8 +448,8 @@ async function initWhatsApp(io, forceNew = false) {
             name: chat.name || chat.subject || 'Grupo do WhatsApp',
             type: 'group'
           });
-        } else {
-          // Chat individual (inclui conversas ativas e arquivadas)
+        } else if (isRealIndividualUser(chat.id, selfJid)) {
+          // Chat individual válido (contatos salvos e conversas normais/arquivadas)
           const existing = contactsMap.get(chat.id);
           const rawName = chat.name || chat.notify || existing?.name;
           const name = formatDisplayName(rawName, chat.id);
@@ -456,27 +484,23 @@ async function initWhatsApp(io, forceNew = false) {
       }
     });
 
-    // Capturar contatos também de mensagens recebidas ou enviadas
+    // Atualizar pushName se recebido, mas nunca criar destinatários de grupos/LIDs em messages.upsert
     currentSocket.ev.on('messages.upsert', async ({ messages }) => {
       if (!Array.isArray(messages)) return;
-      const batch = [];
+      const selfJid = currentSocket.user?.id;
+      let updated = false;
       for (const m of messages) {
         const jid = m.key?.remoteJid;
-        if (jid && !jid.includes('@g.us') && !jid.includes('status@broadcast')) {
-          if (!contactsMap.has(jid)) {
-            const name = formatDisplayName(m.pushName, jid);
-            const obj = { jid, name, type: 'individual' };
-            contactsMap.set(jid, obj);
-            batch.push(obj);
+        if (isRealIndividualUser(jid, selfJid) && contactsMap.has(jid)) {
+          const existing = contactsMap.get(jid);
+          if (m.pushName && (!existing.name || existing.name === jid || existing.name.startsWith('+'))) {
+            existing.name = formatDisplayName(m.pushName, jid);
+            contactsMap.set(jid, existing);
+            updated = true;
           }
         }
       }
-      if (batch.length > 0) {
-        try {
-          await db.autoUpsertRecipients(batch);
-        } catch (e) {
-          console.warn('[WhatsApp] Erro ao auto-salvar contatos de mensagens:', e.message);
-        }
+      if (updated) {
         broadcastContactsUpdate();
       }
     });
@@ -499,8 +523,8 @@ function broadcastContactsUpdate() {
 }
 
 function getContactsAndGroups() {
-  // Retorna apenas contatos individuais, ignorando grupos
-  return Array.from(contactsMap.values());
+  // Retorna apenas contatos individuais com JID real válido
+  return Array.from(contactsMap.values()).filter(c => isRealIndividualUser(c.jid));
 }
 
 async function sendMessage(jid, text, imagePath = null) {
@@ -510,6 +534,12 @@ async function sendMessage(jid, text, imagePath = null) {
   if (formattedJid.includes('@g.us')) {
     console.log(`[Segurança Anti-Grupo] Ignorando envio para grupo: ${formattedJid}`);
     return { status: 'skipped', reason: 'group_blocked' };
+  }
+
+  // Trava de segurança: NUNCA disparar para canais, newsletters ou LIDs anônimos
+  if (!isRealIndividualUser(formattedJid)) {
+    console.log(`[Segurança] Ignorando envio para destinatário não individual/inválido: ${formattedJid}`);
+    return { status: 'skipped', reason: 'invalid_recipient_blocked' };
   }
 
   if (!sock) {
@@ -544,6 +574,7 @@ module.exports = {
   waitForQrCode,
   broadcastStatus,
   formatJid,
+  isRealIndividualUser,
   formatMessagePayload,
   useDatabaseAuthState,
   initWhatsApp,

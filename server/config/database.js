@@ -186,10 +186,24 @@ async function updateSetting(key, value) {
 
 async function getRecipients() {
   if (isPostgres) {
-    const res = await pgPool.query('SELECT * FROM recipients ORDER BY name ASC');
+    const res = await pgPool.query(`
+      SELECT * FROM recipients 
+      WHERE jid LIKE '%@s.whatsapp.net' 
+        AND jid NOT LIKE '%@lid%' 
+        AND jid NOT LIKE '%@newsletter%' 
+        AND jid NOT LIKE '%@g.us%'
+      ORDER BY name ASC
+    `);
     return res.rows;
   } else {
-    const stmt = sqliteDb.prepare('SELECT * FROM recipients ORDER BY name ASC');
+    const stmt = sqliteDb.prepare(`
+      SELECT * FROM recipients 
+      WHERE jid LIKE '%@s.whatsapp.net' 
+        AND jid NOT LIKE '%@lid%' 
+        AND jid NOT LIKE '%@newsletter%' 
+        AND jid NOT LIKE '%@g.us%'
+      ORDER BY name ASC
+    `);
     return stmt.all();
   }
 }
@@ -197,6 +211,9 @@ async function getRecipients() {
 async function saveRecipients(list) {
   if (isPostgres) {
     for (const item of list) {
+      if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
+        continue;
+      }
       const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
       await pgPool.query(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
@@ -219,6 +236,9 @@ async function saveRecipients(list) {
         updated_at = CURRENT_TIMESTAMP
     `);
     for (const item of list) {
+      if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
+        continue;
+      }
       const activeVal = (item.active === true || item.active === 1) ? 1 : 0;
       stmt.run(item.jid, item.name || '', item.type || 'individual', activeVal);
     }
@@ -229,7 +249,9 @@ async function autoUpsertRecipients(list) {
   if (!list || list.length === 0) return;
   if (isPostgres) {
     for (const item of list) {
-      if (!item.jid || item.jid.includes('@g.us')) continue;
+      if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
+        continue;
+      }
       await pgPool.query(`
         INSERT INTO recipients (jid, name, type, active, updated_at)
         VALUES ($1, $2, $3, 1, NOW())
@@ -247,9 +269,21 @@ async function autoUpsertRecipients(list) {
         updated_at = CURRENT_TIMESTAMP
     `);
     for (const item of list) {
-      if (!item.jid || item.jid.includes('@g.us')) continue;
+      if (!item.jid || !item.jid.endsWith('@s.whatsapp.net') || item.jid.includes('@lid') || item.jid.includes('@newsletter') || item.jid.includes('@g.us')) {
+        continue;
+      }
       stmt.run(item.jid, item.name || '', item.type || 'individual');
     }
+  }
+}
+
+async function deleteRecipient(jid) {
+  if (!jid) return;
+  if (isPostgres) {
+    await pgPool.query('DELETE FROM recipients WHERE jid = $1', [jid]);
+  } else {
+    const stmt = sqliteDb.prepare('DELETE FROM recipients WHERE jid = ?');
+    stmt.run(jid);
   }
 }
 
@@ -425,6 +459,7 @@ module.exports = {
   getRecipients,
   saveRecipients,
   autoUpsertRecipients,
+  deleteRecipient,
   logSend,
   getSendLogs,
   getDailyVerseState,

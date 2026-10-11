@@ -83,7 +83,23 @@ async function runTest() {
     const getRecipientsRes = await request('/api/recipients');
     assert.strictEqual(getRecipientsRes.status, 200);
     assert.ok(getRecipientsRes.data.some(r => r.jid === '5511988887777@s.whatsapp.net'));
-    console.log('✓ Recipients endpoints work');
+
+    // Test POST /api/recipients/add
+    const addRecipientRes = await request('/api/recipients/add', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Novo Contato Manual', phone: '11977776666' })
+    });
+    assert.strictEqual(addRecipientRes.status, 200);
+    assert.strictEqual(addRecipientRes.data.success, true);
+    assert.strictEqual(addRecipientRes.data.recipient.jid, '5511977776666@s.whatsapp.net');
+
+    // Test DELETE /api/recipients/:jid
+    const deleteRecipientRes = await request('/api/recipients/5511977776666@s.whatsapp.net', {
+      method: 'DELETE'
+    });
+    assert.strictEqual(deleteRecipientRes.status, 200);
+    assert.strictEqual(deleteRecipientRes.data.success, true);
+    console.log('✓ Recipients endpoints (get, save, add, delete) work');
 
     // 7. GET /api/logs
     const logsRes = await request('/api/logs');
