@@ -16,9 +16,13 @@ async function initDatabase() {
   if (databaseUrl && databaseUrl.trim() !== '') {
     isPostgres = true;
     const { Pool } = require('pg');
+    
+    // Remove query params como sslmode para evitar conflito com cert chain do Supabase
+    const cleanUrl = databaseUrl.replace(/[?&]sslmode=[^&]+/g, '').replace(/\?$/, '');
+
     pgPool = new Pool({
-      connectionString: databaseUrl,
-      ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false }
+      connectionString: cleanUrl,
+      ssl: cleanUrl.includes('localhost') ? false : { rejectUnauthorized: false }
     });
 
     await pgPool.query(`
