@@ -122,6 +122,7 @@ export default function App() {
     try {
       const res = await fetch('/api/recipients');
       const data = await res.json();
+      console.log(`[App] 👥 ${data.length} destinatários carregados (agenda + conversas ativas e arquivadas).`);
       setRecipients(data);
     } catch (err) {
       console.error('Erro ao carregar destinatários:', err);

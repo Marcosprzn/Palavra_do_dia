@@ -249,13 +249,15 @@ async function initWhatsApp(io, forceNew = false) {
       console.warn('Aviso ao carregar contatos salvos do banco:', e.message);
     }
 
-    // syncFullHistory NÃO deve ser true durante pareamento pois a Meta encerra com erro 428
+    // Configuração com Ubuntu Chrome permite syncFullHistory sem erro 428
     const currentSocket = makeWASocket({
       version,
       logger,
       printQRInTerminal: false,
       auth: state,
-      browser: Browsers.macOS('Desktop'),
+      browser: Browsers.ubuntu('Chrome'),
+      syncFullHistory: true,
+      shouldSyncHistoryMessage: () => true,
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 60000,
       keepAliveIntervalMs: 30000,
@@ -341,70 +343,72 @@ async function initWhatsApp(io, forceNew = false) {
       return digits || 'Contato';
     }
 
-    // Sincronizar contatos (upsert, set, updates e histórico)
+    // Sincronizar contatos (upsert, set, updates e histórico da agenda)
     const handleAddContacts = async (contacts) => {
       if (!Array.isArray(contacts)) return;
       const batch = [];
       for (const c of contacts) {
-        if (c.id && !c.id.includes('@g.us') && !c.id.includes('status@broadcast')) {
-          const rawName = c.name || c.notify || c.verifiedName || contactsMap.get(c.id)?.name;
-          const name = formatDisplayName(rawName, c.id);
-          const obj = {
-            jid: c.id,
-            name,
-            type: 'individual'
-          };
-          contactsMap.set(c.id, obj);
-          batch.push(obj);
+        let jid = c.id;
+        if (c.jid && c.jid.includes('@s.whatsapp.net')) {
+          jid = c.jid;
         }
+        if (!jid || jid.includes('@g.us') || jid.includes('status@broadcast')) {
+          continue;
+        }
+
+        const rawName = c.name || c.notify || c.verifiedName || contactsMap.get(jid)?.name;
+        const name = formatDisplayName(rawName, jid);
+        const obj = {
+          jid,
+          name,
+          type: 'individual'
+        };
+        contactsMap.set(jid, obj);
+        batch.push(obj);
       }
       if (batch.length > 0) {
         try {
           await db.autoUpsertRecipients(batch);
         } catch (e) {
-          console.warn('Erro ao auto-salvar contatos no banco:', e.message);
+          console.warn('[WhatsApp] Erro ao auto-salvar contatos no banco:', e.message);
         }
         broadcastContactsUpdate();
       }
     };
 
-    sock.ev.on('contacts.upsert', handleAddContacts);
-    sock.ev.on('contacts.set', ({ contacts }) => handleAddContacts(contacts));
+    currentSocket.ev.on('contacts.upsert', handleAddContacts);
+    currentSocket.ev.on('contacts.set', ({ contacts }) => handleAddContacts(contacts));
 
-    sock.ev.on('contacts.update', async (updates) => {
+    currentSocket.ev.on('contacts.update', async (updates) => {
       const batch = [];
       for (const u of updates) {
-        if (u.id && !u.id.includes('@g.us') && !u.id.includes('status@broadcast')) {
-          const existing = contactsMap.get(u.id);
-          const rawName = u.name || u.notify || u.verifiedName || existing?.name;
-          const name = formatDisplayName(rawName, u.id);
-          const obj = {
-            jid: u.id,
-            name,
-            type: 'individual'
-          };
-          contactsMap.set(u.id, obj);
-          batch.push(obj);
+        let jid = u.id;
+        if (u.jid && u.jid.includes('@s.whatsapp.net')) {
+          jid = u.jid;
         }
+        if (!jid || jid.includes('@g.us') || jid.includes('status@broadcast')) continue;
+        const existing = contactsMap.get(jid);
+        const rawName = u.name || u.notify || u.verifiedName || existing?.name;
+        const name = formatDisplayName(rawName, jid);
+        const obj = {
+          jid,
+          name,
+          type: 'individual'
+        };
+        contactsMap.set(jid, obj);
+        batch.push(obj);
       }
       if (batch.length > 0) {
         try {
           await db.autoUpsertRecipients(batch);
         } catch (e) {
-          console.warn('Erro ao atualizar contatos no banco:', e.message);
+          console.warn('[WhatsApp] Erro ao atualizar contatos no banco:', e.message);
         }
         broadcastContactsUpdate();
       }
     });
 
-    sock.ev.on('messaging-history.set', async ({ contacts, chats }) => {
-      if (contacts) await handleAddContacts(contacts);
-      if (Array.isArray(chats)) {
-        await handleChats(chats);
-      }
-    });
-
-    // Sincronizar chats (para capturar conversas individuais e mapear grupos)
+    // Sincronizar conversas (normais, fixadas e arquivadas)
     const handleChats = async (chats) => {
       if (!Array.isArray(chats)) return;
       const batch = [];
@@ -417,7 +421,7 @@ async function initWhatsApp(io, forceNew = false) {
             type: 'group'
           });
         } else {
-          // Chat individual
+          // Chat individual (inclui conversas ativas e arquivadas)
           const existing = contactsMap.get(chat.id);
           const rawName = chat.name || chat.notify || existing?.name;
           const name = formatDisplayName(rawName, chat.id);
@@ -434,17 +438,26 @@ async function initWhatsApp(io, forceNew = false) {
         try {
           await db.autoUpsertRecipients(batch);
         } catch (e) {
-          console.warn('Erro ao auto-salvar chats no banco:', e.message);
+          console.warn('[WhatsApp] Erro ao auto-salvar conversas no banco:', e.message);
         }
         broadcastContactsUpdate();
       }
     };
 
-    sock.ev.on('chats.upsert', handleChats);
-    sock.ev.on('chats.set', ({ chats }) => handleChats(chats));
+    currentSocket.ev.on('chats.upsert', handleChats);
+    currentSocket.ev.on('chats.set', ({ chats }) => handleChats(chats));
+    currentSocket.ev.on('chats.update', handleChats);
+
+    currentSocket.ev.on('messaging-history.set', async ({ contacts, chats, isLatest, syncType }) => {
+      console.log(`[WhatsApp] 📥 Histórico recebido: ${contacts?.length || 0} contatos da agenda, ${chats?.length || 0} conversas ativas/arquivadas`);
+      if (contacts) await handleAddContacts(contacts);
+      if (Array.isArray(chats)) {
+        await handleChats(chats);
+      }
+    });
 
     // Capturar contatos também de mensagens recebidas ou enviadas
-    sock.ev.on('messages.upsert', async ({ messages }) => {
+    currentSocket.ev.on('messages.upsert', async ({ messages }) => {
       if (!Array.isArray(messages)) return;
       const batch = [];
       for (const m of messages) {
@@ -462,7 +475,7 @@ async function initWhatsApp(io, forceNew = false) {
         try {
           await db.autoUpsertRecipients(batch);
         } catch (e) {
-          console.warn('Erro ao auto-salvar contatos de mensagens:', e.message);
+          console.warn('[WhatsApp] Erro ao auto-salvar contatos de mensagens:', e.message);
         }
         broadcastContactsUpdate();
       }
