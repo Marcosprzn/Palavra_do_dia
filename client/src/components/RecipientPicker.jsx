@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Users, Search, CheckSquare, Square, Check, Filter } from 'lucide-react';
+import { Users, Search, CheckSquare, Square, Check, Filter, RefreshCw, Info } from 'lucide-react';
 
-export default function RecipientPicker({ recipients, onSaveRecipients, loading }) {
+export default function RecipientPicker({ recipients, onSaveRecipients, onRefresh, loading }) {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'active' | 'inactive'
   const [localList, setLocalList] = useState(recipients || []);
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Sync if parent updates
   React.useEffect(() => {
@@ -28,6 +29,16 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
     await onSaveRecipients(localList);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2000);
+  };
+
+  const handleRefreshClick = async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => setRefreshing(false), 800);
+    }
   };
 
   const activeCount = localList.filter(r => r.active).length;
@@ -56,27 +67,49 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
             <h2 className="text-base sm:text-lg font-display font-bold text-[#382A1E] flex items-center gap-2 flex-wrap">
               Destinatários do WhatsApp
               <span className="text-[10px] sm:text-xs font-sans font-medium px-2 sm:px-2.5 py-0.5 rounded-full bg-[#EBF7EE] text-[#2D6A4F] border border-[#C2E4C9]">
-                {activeCount} de {localList.length} marcados
+                {activeCount} de {localList.length} marcados para envio
               </span>
             </h2>
             <p className="text-[11px] sm:text-xs text-[#7A6859]">
-              Espelho fiel dos contatos. Desmarque quem não deve receber e salve.
+              Espelho fiel dos contatos do seu aparelho. Desmarque quem não deve receber e salve.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className={`flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 w-full sm:w-auto ${
-            savedFeedback
-              ? 'bg-[#2D6A4F] text-white'
-              : 'bg-[#382A1E] hover:bg-[#251B12] text-white'
-          }`}
-        >
-          {savedFeedback ? <Check className="w-4 h-4" /> : null}
-          {savedFeedback ? 'Salvo com Sucesso!' : 'Salvar Destinatários'}
-        </button>
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
+          {onRefresh && (
+            <button
+              onClick={handleRefreshClick}
+              disabled={loading || refreshing}
+              title="Sincronizar novamente com a agenda do WhatsApp"
+              className="p-2.5 sm:px-3 sm:py-2 text-xs font-semibold rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFE6] text-[#382A1E] border border-[#E8DFD3] transition-all cursor-pointer shadow-xs flex items-center gap-1.5 flex-shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#C59B27] ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sincronizar</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 ${
+              savedFeedback
+                ? 'bg-[#2D6A4F] text-white'
+                : 'bg-[#382A1E] hover:bg-[#251B12] text-white'
+            }`}
+          >
+            {savedFeedback ? <Check className="w-4 h-4" /> : null}
+            {savedFeedback ? 'Salvo com Sucesso!' : 'Salvar Destinatários'}
+          </button>
+        </div>
+      </div>
+
+      {/* Helpful Instructions Banner */}
+      <div className="p-3 rounded-2xl bg-[#FDF9EF] border border-[#EBD69E] text-xs text-[#8E691A] flex items-start sm:items-center gap-2.5 mb-4">
+        <Info className="w-4 h-4 flex-shrink-0 text-[#C59B27] mt-0.5 sm:mt-0" />
+        <p className="leading-relaxed text-[11px] sm:text-xs">
+          <strong>Como funciona:</strong> Seus contatos sincronizados chegam <strong>marcados por padrão</strong>. Basta desmarcar as pessoas para quem você <strong>não</strong> deseja enviar o versículo diário e clicar em <strong>Salvar Destinatários</strong>.
+        </p>
       </div>
 
       {/* Search Bar & Bulk Actions */}
@@ -110,13 +143,13 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
         </div>
 
         {/* Filter Pills (All / Active / Inactive) */}
-        <div className="flex items-center gap-2 pt-1 text-xs">
-          <span className="text-[11px] text-[#8E7B6C] flex items-center gap-1 mr-1">
+        <div className="flex items-center gap-2 pt-1 text-xs overflow-x-auto no-scrollbar">
+          <span className="text-[11px] text-[#8E7B6C] flex items-center gap-1 mr-1 flex-shrink-0">
             <Filter className="w-3 h-3" /> Filtrar:
           </span>
           <button
             onClick={() => setFilterType('all')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
               filterType === 'all'
                 ? 'bg-[#382A1E] text-white'
                 : 'bg-[#FAF8F5] text-[#7A6859] hover:bg-[#F6F1EA] border border-[#E8DFD3]'
@@ -126,7 +159,7 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
           </button>
           <button
             onClick={() => setFilterType('active')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
               filterType === 'active'
                 ? 'bg-[#2D6A4F] text-white'
                 : 'bg-[#FAF8F5] text-[#7A6859] hover:bg-[#F6F1EA] border border-[#E8DFD3]'
@@ -136,7 +169,7 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
           </button>
           <button
             onClick={() => setFilterType('inactive')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
               filterType === 'inactive'
                 ? 'bg-[#8E7B6C] text-white'
                 : 'bg-[#FAF8F5] text-[#7A6859] hover:bg-[#F6F1EA] border border-[#E8DFD3]'
@@ -153,11 +186,11 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
           <div className="text-center py-12 px-4 text-xs text-[#A8988B] space-y-1">
             {localList.length === 0 ? (
               <>
-                <p className="font-semibold text-[#7A6859]">Nenhum contato sincronizado ainda.</p>
-                <p>Conecte o seu WhatsApp escaneando o QR Code na aba "Conexão WhatsApp" para carregar automaticamente seus contatos.</p>
+                <p className="font-semibold text-[#7A6859]">Aguardando conexão ou sincronização do WhatsApp.</p>
+                <p>Escaneie o QR Code na aba "WhatsApp" para que seus contatos sejam importados automaticamente.</p>
               </>
             ) : (
-              <p>Nenhum contato encontrado com o termo ou filtro aplicado.</p>
+              <p>Nenhum contato encontrado com o filtro ou busca aplicado.</p>
             )}
           </div>
         ) : (
@@ -167,7 +200,7 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
               onClick={() => toggleRecipient(item.jid)}
               className="p-3.5 flex items-center justify-between hover:bg-white cursor-pointer transition-colors select-none"
             >
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 min-w-0 pr-2">
                 <div className="flex-shrink-0">
                   {item.active ? (
                     <CheckSquare className="w-5 h-5 text-[#2D6A4F]" />
@@ -175,22 +208,22 @@ export default function RecipientPicker({ recipients, onSaveRecipients, loading 
                     <Square className="w-5 h-5 text-[#C5B8AB]" />
                   )}
                 </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-[#382A1E] flex items-center gap-2">
+                <div className="min-w-0">
+                  <h4 className="text-xs font-semibold text-[#382A1E] truncate">
                     {item.name || item.jid.split('@')[0]}
                   </h4>
-                  <p className="text-[10px] text-[#8E7B6C] font-mono">
+                  <p className="text-[10px] text-[#8E7B6C] font-mono truncate">
                     {item.jid.replace('@s.whatsapp.net', '')}
                   </p>
                 </div>
               </div>
 
-              <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
+              <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full transition-all flex-shrink-0 whitespace-nowrap ${
                 item.active
                   ? 'text-[#2D6A4F] bg-[#EBF7EE] border border-[#C2E4C9]'
                   : 'text-[#8E7B6C] bg-white border border-[#E8DFD3]'
               }`}>
-                {item.active ? 'Enviar Mensagem' : 'Não Enviar'}
+                {item.active ? 'Enviar' : 'Não Enviar'}
               </span>
             </div>
           ))

@@ -225,6 +225,34 @@ async function saveRecipients(list) {
   }
 }
 
+async function autoUpsertRecipients(list) {
+  if (!list || list.length === 0) return;
+  if (isPostgres) {
+    for (const item of list) {
+      if (!item.jid || item.jid.includes('@g.us')) continue;
+      await pgPool.query(`
+        INSERT INTO recipients (jid, name, type, active, updated_at)
+        VALUES ($1, $2, $3, 1, NOW())
+        ON CONFLICT (jid) DO UPDATE SET
+          name = CASE WHEN EXCLUDED.name != '' THEN EXCLUDED.name ELSE recipients.name END,
+          updated_at = NOW()
+      `, [item.jid, item.name || '', item.type || 'individual']);
+    }
+  } else {
+    const stmt = sqliteDb.prepare(`
+      INSERT INTO recipients (jid, name, type, active, updated_at)
+      VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+      ON CONFLICT (jid) DO UPDATE SET
+        name = CASE WHEN excluded.name != '' THEN excluded.name ELSE recipients.name END,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+    for (const item of list) {
+      if (!item.jid || item.jid.includes('@g.us')) continue;
+      stmt.run(item.jid, item.name || '', item.type || 'individual');
+    }
+  }
+}
+
 async function logSend(entry) {
   if (isPostgres) {
     await pgPool.query(`
@@ -396,6 +424,7 @@ module.exports = {
   updateSetting,
   getRecipients,
   saveRecipients,
+  autoUpsertRecipients,
   logSend,
   getSendLogs,
   getDailyVerseState,

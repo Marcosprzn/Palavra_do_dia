@@ -205,45 +205,23 @@ router.post('/schedule', async (req, res) => {
 // 6. Recipients (merge WhatsApp synced + DB)
 router.get('/recipients', async (req, res) => {
   try {
-    const dbRecipients = await db.getRecipients();
     const waRecipients = whatsappService.getContactsAndGroups();
 
-    const dbMap = new Map();
-    for (const r of dbRecipients) {
-      if (r.jid) dbMap.set(r.jid, r);
+    // Se houver contatos sincronizados pelo WhatsApp, auto-salva no banco (novos vêm com active=1)
+    if (waRecipients && waRecipients.length > 0) {
+      await db.autoUpsertRecipients(waRecipients);
     }
 
-    const mergedMap = new Map();
+    const dbRecipients = await db.getRecipients();
+    const list = dbRecipients
+      .filter(r => r.type !== 'group' && !r.jid.includes('@g.us'))
+      .map(r => ({
+        jid: r.jid,
+        name: r.name,
+        type: 'individual',
+        active: r.active === 1 || r.active === true
+      }));
 
-    // Se o WhatsApp estiver conectado e tiver sincronizado contatos, o WhatsApp é o espelho fiel
-    if (waRecipients.length > 0) {
-      for (const w of waRecipients) {
-        if (!w.jid || w.jid.includes('@g.us')) continue;
-        const saved = dbMap.get(w.jid);
-        mergedMap.set(w.jid, {
-          jid: w.jid,
-          name: (saved && saved.name) || w.name,
-          type: 'individual',
-          // Se o usuário já salvou preferência no banco, respeita. Caso contrário, vem marcado por padrão (true) para poder desmarcar
-          active: saved ? (saved.active === 1 || saved.active === true) : true
-        });
-      }
-    } else {
-      // Se o WhatsApp ainda não sincronizou, exibe os destinatários salvos no banco
-      for (const r of dbRecipients) {
-        if (!r.jid || r.jid.includes('@g.us')) continue;
-        mergedMap.set(r.jid, {
-          jid: r.jid,
-          name: r.name,
-          type: 'individual',
-          active: r.active === 1 || r.active === true
-        });
-      }
-    }
-
-    const list = Array.from(mergedMap.values()).filter(
-      r => r.type !== 'group' && !r.jid.includes('@g.us')
-    );
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });

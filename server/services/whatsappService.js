@@ -150,6 +150,22 @@ async function initWhatsApp(io) {
 
     const logger = pino({ level: 'silent' });
 
+    // Carregar contatos salvos no banco de dados previamente
+    try {
+      const savedInDb = await db.getRecipients();
+      for (const r of savedInDb) {
+        if (r.jid && !r.jid.includes('@g.us')) {
+          contactsMap.set(r.jid, {
+            jid: r.jid,
+            name: r.name || r.jid.split('@')[0],
+            type: 'individual'
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Aviso ao carregar contatos salvos do banco:', e.message);
+    }
+
     sock = makeWASocket({
       version,
       logger,
@@ -158,7 +174,9 @@ async function initWhatsApp(io) {
       browser: Browsers.macOS('Desktop'),
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 60000,
-      keepAliveIntervalMs: 30000
+      keepAliveIntervalMs: 30000,
+      syncFullHistory: true,
+      markOnlineOnConnect: true
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -202,70 +220,96 @@ async function initWhatsApp(io) {
       }
     });
 
+    // Função utilitária para formatar nome exibível de contato
+    function formatDisplayName(name, jid) {
+      if (name && name.trim() !== '' && name !== jid) {
+        return name.trim();
+      }
+      const digits = (jid || '').replace(/@.*$/, '').replace(/\D/g, '');
+      if (digits.length >= 10) {
+        if (digits.startsWith('55') && digits.length >= 12) {
+          const ddd = digits.slice(2, 4);
+          const rest = digits.slice(4);
+          if (rest.length === 9) {
+            return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+          } else if (rest.length === 8) {
+            return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+          }
+        }
+        return `+${digits}`;
+      }
+      return digits || 'Contato';
+    }
+
     // Sincronizar contatos (upsert, set, updates e histórico)
-    const handleAddContacts = (contacts) => {
+    const handleAddContacts = async (contacts) => {
       if (!Array.isArray(contacts)) return;
-      let changed = false;
+      const batch = [];
       for (const c of contacts) {
-        if (c.id && !c.id.includes('@g.us')) {
-          const name = c.name || c.notify || c.verifiedName || (contactsMap.get(c.id)?.name) || c.id.split('@')[0];
-          contactsMap.set(c.id, {
+        if (c.id && !c.id.includes('@g.us') && !c.id.includes('status@broadcast')) {
+          const rawName = c.name || c.notify || c.verifiedName || contactsMap.get(c.id)?.name;
+          const name = formatDisplayName(rawName, c.id);
+          const obj = {
             jid: c.id,
             name,
             type: 'individual'
-          });
-          changed = true;
+          };
+          contactsMap.set(c.id, obj);
+          batch.push(obj);
         }
       }
-      if (changed) broadcastContactsUpdate();
+      if (batch.length > 0) {
+        try {
+          await db.autoUpsertRecipients(batch);
+        } catch (e) {
+          console.warn('Erro ao auto-salvar contatos no banco:', e.message);
+        }
+        broadcastContactsUpdate();
+      }
     };
 
     sock.ev.on('contacts.upsert', handleAddContacts);
     sock.ev.on('contacts.set', ({ contacts }) => handleAddContacts(contacts));
 
-    sock.ev.on('contacts.update', (updates) => {
-      let changed = false;
+    sock.ev.on('contacts.update', async (updates) => {
+      const batch = [];
       for (const u of updates) {
-        if (u.id && !u.id.includes('@g.us')) {
+        if (u.id && !u.id.includes('@g.us') && !u.id.includes('status@broadcast')) {
           const existing = contactsMap.get(u.id);
-          const name = u.name || u.notify || u.verifiedName || (existing?.name) || u.id.split('@')[0];
-          contactsMap.set(u.id, {
+          const rawName = u.name || u.notify || u.verifiedName || existing?.name;
+          const name = formatDisplayName(rawName, u.id);
+          const obj = {
             jid: u.id,
             name,
             type: 'individual'
-          });
-          changed = true;
+          };
+          contactsMap.set(u.id, obj);
+          batch.push(obj);
         }
       }
-      if (changed) broadcastContactsUpdate();
+      if (batch.length > 0) {
+        try {
+          await db.autoUpsertRecipients(batch);
+        } catch (e) {
+          console.warn('Erro ao atualizar contatos no banco:', e.message);
+        }
+        broadcastContactsUpdate();
+      }
     });
 
-    sock.ev.on('messaging-history.set', ({ contacts, chats }) => {
-      if (contacts) handleAddContacts(contacts);
+    sock.ev.on('messaging-history.set', async ({ contacts, chats }) => {
+      if (contacts) await handleAddContacts(contacts);
       if (Array.isArray(chats)) {
-        let changed = false;
-        for (const chat of chats) {
-          if (chat.id && !chat.id.includes('@g.us')) {
-            if (!contactsMap.has(chat.id)) {
-              contactsMap.set(chat.id, {
-                jid: chat.id,
-                name: chat.name || chat.notify || chat.id.split('@')[0],
-                type: 'individual'
-              });
-              changed = true;
-            }
-          }
-        }
-        if (changed) broadcastContactsUpdate();
+        await handleChats(chats);
       }
     });
 
     // Sincronizar chats (para capturar conversas individuais e mapear grupos)
-    const handleChats = (chats) => {
+    const handleChats = async (chats) => {
       if (!Array.isArray(chats)) return;
-      let changed = false;
+      const batch = [];
       for (const chat of chats) {
-        if (!chat.id) continue;
+        if (!chat.id || chat.id.includes('status@broadcast')) continue;
         if (chat.id.includes('@g.us')) {
           groupsMap.set(chat.id, {
             jid: chat.id,
@@ -274,21 +318,55 @@ async function initWhatsApp(io) {
           });
         } else {
           // Chat individual
-          if (!contactsMap.has(chat.id)) {
-            contactsMap.set(chat.id, {
-              jid: chat.id,
-              name: chat.name || chat.notify || chat.id.split('@')[0],
-              type: 'individual'
-            });
-            changed = true;
-          }
+          const existing = contactsMap.get(chat.id);
+          const rawName = chat.name || chat.notify || existing?.name;
+          const name = formatDisplayName(rawName, chat.id);
+          const obj = {
+            jid: chat.id,
+            name,
+            type: 'individual'
+          };
+          contactsMap.set(chat.id, obj);
+          batch.push(obj);
         }
       }
-      if (changed) broadcastContactsUpdate();
+      if (batch.length > 0) {
+        try {
+          await db.autoUpsertRecipients(batch);
+        } catch (e) {
+          console.warn('Erro ao auto-salvar chats no banco:', e.message);
+        }
+        broadcastContactsUpdate();
+      }
     };
 
     sock.ev.on('chats.upsert', handleChats);
     sock.ev.on('chats.set', ({ chats }) => handleChats(chats));
+
+    // Capturar contatos também de mensagens recebidas ou enviadas
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+      if (!Array.isArray(messages)) return;
+      const batch = [];
+      for (const m of messages) {
+        const jid = m.key?.remoteJid;
+        if (jid && !jid.includes('@g.us') && !jid.includes('status@broadcast')) {
+          if (!contactsMap.has(jid)) {
+            const name = formatDisplayName(m.pushName, jid);
+            const obj = { jid, name, type: 'individual' };
+            contactsMap.set(jid, obj);
+            batch.push(obj);
+          }
+        }
+      }
+      if (batch.length > 0) {
+        try {
+          await db.autoUpsertRecipients(batch);
+        } catch (e) {
+          console.warn('Erro ao auto-salvar contatos de mensagens:', e.message);
+        }
+        broadcastContactsUpdate();
+      }
+    });
 
     return sock;
   } catch (err) {
